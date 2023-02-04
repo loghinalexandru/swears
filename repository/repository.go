@@ -17,7 +17,7 @@ type fileDB struct {
 func New(language string, path string) *fileDB {
 	db := &fileDB{
 		lang: language,
-		data: make([]string, 0),
+		data: []string{},
 	}
 	db.Load(path)
 
