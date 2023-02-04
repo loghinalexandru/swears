@@ -54,6 +54,7 @@ func (svc SwearsSvc) GetSwearFile(lang string, opus bool) []byte {
 	fname := fmt.Sprintf("misc/%s.mp3", strconv.Itoa(repo.Get().Index))
 	_, err := os.Stat(fname)
 
+	//TODO: remove depdency on package write own function
 	if os.IsNotExist(err) {
 		config := tts.Speech{Folder: "misc", Language: lang}
 		config.CreateSpeechFile(repo.Get().Value, strconv.Itoa(repo.Get().Index))
