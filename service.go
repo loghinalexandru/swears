@@ -3,10 +3,11 @@ package main
 import (
 	"fmt"
 	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 
-	tts "github.com/hegedustibor/htgo-tts"
 	"github.com/jonas747/dca"
 	"github.com/loghinalexandru/swears/models"
 )
@@ -54,10 +55,8 @@ func (svc SwearsSvc) GetSwearFile(lang string, opus bool) []byte {
 	fname := fmt.Sprintf("misc/%s.mp3", strconv.Itoa(repo.Get().Index))
 	_, err := os.Stat(fname)
 
-	//TODO: remove depdency on package write own function
 	if os.IsNotExist(err) {
-		config := tts.Speech{Folder: "misc", Language: lang}
-		config.CreateSpeechFile(repo.Get().Value, strconv.Itoa(repo.Get().Index))
+		downloadTTSFile(fname, repo.Get().Value, lang)
 	}
 
 	if opus {
@@ -86,4 +85,27 @@ func (svc SwearsSvc) GetSwearFile(lang string, opus bool) []byte {
 	}
 
 	return result
+}
+
+func downloadTTSFile(fileName string, text string, lang string) error {
+	f, err := os.Open(fileName)
+	if err != nil {
+		url := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&total=1&idx=0&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(text), lang)
+		response, err := http.Get(url)
+		if err != nil {
+			return err
+		}
+		defer response.Body.Close()
+
+		output, err := os.Create(fileName)
+		if err != nil {
+			return err
+		}
+
+		_, err = io.Copy(output, response.Body)
+		return err
+	}
+
+	f.Close()
+	return nil
 }
