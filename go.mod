@@ -2,7 +2,10 @@ module github.com/loghinalexandru/swears
 
 go 1.19
 
-require github.com/jonas747/dca v0.0.0-20210930103944-155f5e5f0cc7
+require (
+	github.com/google/uuid v1.3.0
+	github.com/jonas747/dca v0.0.0-20210930103944-155f5e5f0cc7
+)
 
 require (
 	github.com/bwmarrin/discordgo v0.27.0 // indirect

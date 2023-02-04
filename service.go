@@ -6,24 +6,29 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
+	"sync"
 
 	"github.com/jonas747/dca"
 	"github.com/loghinalexandru/swears/models"
 )
 
+const (
+	ttsURL = "http://translate.google.com/translate_tts?ie=UTF-8&total=1&idx=0&textlen=32&client=tw-ob&q=%s&tl=%s"
+)
+
 type SwearsRepo interface {
 	Get() models.Record
 	Lang() string
-	Load(file string)
 }
 
 type SwearsSvc struct {
+	mtx  sync.Mutex
 	data map[string]SwearsRepo
 }
 
-func NewSwears(repos []SwearsRepo) SwearsSvc {
+func NewSwears(repos []SwearsRepo) *SwearsSvc {
 	result := SwearsSvc{
+		mtx:  sync.Mutex{},
 		data: make(map[string]SwearsRepo),
 	}
 
@@ -31,10 +36,10 @@ func NewSwears(repos []SwearsRepo) SwearsSvc {
 		result.data[repo.Lang()] = repo
 	}
 
-	return result
+	return &result
 }
 
-func (svc SwearsSvc) GetSwear(lang string) string {
+func (svc *SwearsSvc) GetSwear(lang string) string {
 	repo, exits := svc.data[lang]
 
 	if !exits {
@@ -44,7 +49,7 @@ func (svc SwearsSvc) GetSwear(lang string) string {
 	return repo.Get().Value
 }
 
-func (svc SwearsSvc) GetSwearFile(lang string, opus bool) []byte {
+func (svc *SwearsSvc) GetSwearFile(lang string, opus bool) []byte {
 	var result []byte
 	repo, exits := svc.data[lang]
 
@@ -52,11 +57,11 @@ func (svc SwearsSvc) GetSwearFile(lang string, opus bool) []byte {
 		return result
 	}
 
-	fname := fmt.Sprintf("misc/%s.mp3", strconv.Itoa(repo.Get().Index))
+	fname := fmt.Sprintf("misc/%s.mp3", repo.Get().ID)
 	_, err := os.Stat(fname)
 
 	if os.IsNotExist(err) {
-		downloadTTSFile(fname, repo.Get().Value, lang)
+		svc.downloadTTSFile(fname, repo.Get().Value, lang)
 	}
 
 	if opus {
@@ -68,7 +73,7 @@ func (svc SwearsSvc) GetSwearFile(lang string, opus bool) []byte {
 			fmt.Println(err)
 		}
 
-		fname = fmt.Sprintf("misc/%s.dca", strconv.Itoa(repo.Get().Index))
+		fname = fmt.Sprintf("misc/%s.dca", repo.Get().ID)
 		output, err := os.Create(fname)
 		if err != nil {
 			panic(err)
@@ -87,25 +92,22 @@ func (svc SwearsSvc) GetSwearFile(lang string, opus bool) []byte {
 	return result
 }
 
-func downloadTTSFile(fileName string, text string, lang string) error {
-	f, err := os.Open(fileName)
+func (svc *SwearsSvc) downloadTTSFile(fileName string, text string, lang string) error {
+	url := fmt.Sprintf(ttsURL, url.QueryEscape(text), lang)
+	response, err := http.Get(url)
 	if err != nil {
-		url := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&total=1&idx=0&textlen=32&client=tw-ob&q=%s&tl=%s", url.QueryEscape(text), lang)
-		response, err := http.Get(url)
-		if err != nil {
-			return err
-		}
-		defer response.Body.Close()
-
-		output, err := os.Create(fileName)
-		if err != nil {
-			return err
-		}
-
-		_, err = io.Copy(output, response.Body)
 		return err
 	}
 
-	f.Close()
-	return nil
+	defer response.Body.Close()
+	svc.mtx.Lock()
+	defer svc.mtx.Unlock()
+
+	output, err := os.Create(fileName)
+	if err != nil {
+		return err
+	}
+
+	_, err = io.Copy(output, response.Body)
+	return err
 }

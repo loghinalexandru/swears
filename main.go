@@ -9,15 +9,13 @@ import (
 	"github.com/loghinalexandru/swears/repository"
 )
 
-type handler func(w http.ResponseWriter, r *http.Request)
-
 type Response struct {
 	Swear string `json:"swear"`
 	Lang  string `json:"lang"`
 }
 
-func randomHandler(svc SwearsSvc) handler {
-	return contentTypeJSON(func(w http.ResponseWriter, r *http.Request) {
+func randomHandler(svc *SwearsSvc) http.HandlerFunc {
+	return contentType(func(w http.ResponseWriter, r *http.Request) {
 		lang := "en"
 
 		if r.URL.Query().Has("lang") {
@@ -41,11 +39,11 @@ func randomHandler(svc SwearsSvc) handler {
 		}
 
 		w.Write(res)
-	})
+	}, "application/json")
 }
 
-func soundFileHandler(svc SwearsSvc) handler {
-	return contentTypeMP3(func(w http.ResponseWriter, r *http.Request) {
+func soundFileHandler(svc *SwearsSvc) http.HandlerFunc {
+	return contentType(func(w http.ResponseWriter, r *http.Request) {
 		lang := "en"
 		encode := false
 
@@ -59,7 +57,7 @@ func soundFileHandler(svc SwearsSvc) handler {
 
 		result := svc.GetSwearFile(lang, encode)
 		w.Write(result)
-	})
+	}, "application/octet-stream")
 }
 
 func main() {
@@ -73,19 +71,17 @@ func main() {
 	mux.HandleFunc("/api/random", randomHandler(svc))
 	mux.HandleFunc("/api/random/file", soundFileHandler(svc))
 
-	http.ListenAndServe(":3000", mux)
-}
-
-func contentTypeJSON(next handler) handler {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Content-Type", "application/json")
-		next(w, r)
+	server := http.Server{
+		Addr:    ":3000",
+		Handler: mux,
 	}
+
+	server.ListenAndServe()
 }
 
-func contentTypeMP3(next handler) handler {
+func contentType(next http.HandlerFunc, mediaType string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Content-Type", "application/octet-stream")
+		w.Header().Add("Content-Type", mediaType)
 		next(w, r)
 	}
 }
