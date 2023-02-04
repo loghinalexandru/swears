@@ -1,14 +1,18 @@
 package main
 
 import (
+	"fmt"
+	"io"
 	"os"
+	"strconv"
 
-	htgotts "github.com/hegedustibor/htgo-tts"
-	"github.com/hegedustibor/htgo-tts/voices"
+	tts "github.com/hegedustibor/htgo-tts"
+	"github.com/jonas747/dca"
+	"github.com/loghinalexandru/swears/models"
 )
 
 type SwearsRepo interface {
-	Get() string
+	Get() models.Record
 	Lang() string
 	Load(file string)
 }
@@ -36,10 +40,10 @@ func (svc SwearsSvc) GetSwear(lang string) string {
 		return ""
 	}
 
-	return repo.Get()
+	return repo.Get().Value
 }
 
-func (svc SwearsSvc) GetSwearFile(lang string) []byte {
+func (svc SwearsSvc) GetSwearFile(lang string, opus bool) []byte {
 	var result []byte
 	repo, exits := svc.data[lang]
 
@@ -47,16 +51,38 @@ func (svc SwearsSvc) GetSwearFile(lang string) []byte {
 		return result
 	}
 
-	// TODO: Check if generated already and send. Do not delete at the end
-	config := htgotts.Speech{Folder: "misc", Language: voices.Romanian}
-	config.CreateSpeechFile(repo.Get(), "temp")
+	fname := fmt.Sprintf("misc/%s.mp3", strconv.Itoa(repo.Get().Index))
+	_, err := os.Stat(fname)
 
-	result, err := os.ReadFile("misc/temp.mp3")
-
-	if err != nil {
-		panic("Could not read file!")
+	if os.IsNotExist(err) {
+		config := tts.Speech{Folder: "misc", Language: lang}
+		config.CreateSpeechFile(repo.Get().Value, strconv.Itoa(repo.Get().Index))
 	}
 
-	defer os.Remove("misc/temp.mp3")
+	if opus {
+		encdOpt := dca.StdEncodeOptions
+		encdOpt.RawOutput = true
+		encodeSession, err := dca.EncodeFile(fname, encdOpt)
+
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		fname = fmt.Sprintf("misc/%s.dca", strconv.Itoa(repo.Get().Index))
+		output, err := os.Create(fname)
+		if err != nil {
+			panic(err)
+		}
+
+		io.Copy(output, encodeSession)
+		output.Close()
+		encodeSession.Cleanup()
+	}
+
+	result, err = os.ReadFile(fname)
+	if err != nil {
+		panic(err)
+	}
+
 	return result
 }

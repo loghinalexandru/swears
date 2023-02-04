@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/loghinalexandru/swears/repository"
 )
@@ -46,12 +47,17 @@ func randomHandler(svc SwearsSvc) handler {
 func soundFileHandler(svc SwearsSvc) handler {
 	return contentTypeMP3(func(w http.ResponseWriter, r *http.Request) {
 		lang := "en"
+		encode := false
 
 		if r.URL.Query().Has("lang") {
 			lang = r.URL.Query().Get("lang")
 		}
 
-		result := svc.GetSwearFile(lang)
+		if r.URL.Query().Has("opus") {
+			encode, _ = strconv.ParseBool(r.URL.Query().Get("opus"))
+		}
+
+		result := svc.GetSwearFile(lang, encode)
 		w.Write(result)
 	})
 }

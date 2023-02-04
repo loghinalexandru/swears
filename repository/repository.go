@@ -7,17 +7,19 @@ import (
 	"math/rand"
 	"os"
 	"time"
+
+	"github.com/loghinalexandru/swears/models"
 )
 
 type fileDB struct {
 	lang string
-	data []string
+	data []models.Record
 }
 
 func New(language string, path string) *fileDB {
 	db := &fileDB{
 		lang: language,
-		data: []string{},
+		data: []models.Record{},
 	}
 	db.Load(path)
 
@@ -28,7 +30,7 @@ func (db *fileDB) Lang() string {
 	return db.lang
 }
 
-func (db *fileDB) Get() string {
+func (db *fileDB) Get() models.Record {
 	gen := rand.New(rand.NewSource(time.Now().UnixMilli()))
 	index := gen.Intn(len(db.data))
 
@@ -52,7 +54,13 @@ func (db *fileDB) Load(filePath string) {
 	scaner := bufio.NewScanner(fh)
 	scaner.Split(bufio.ScanLines)
 
+	var i int
 	for scaner.Scan() {
-		db.data = append(db.data, scaner.Text())
+		db.data = append(db.data, models.Record{
+			Index: i,
+			Value: scaner.Text(),
+		})
+
+		i++
 	}
 }
