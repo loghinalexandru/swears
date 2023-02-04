@@ -63,7 +63,7 @@ func soundFileHandler(svc SwearsSvc) handler {
 }
 
 func main() {
-	roRepo := repository.New("ro", "misc/ro.txt")
+	roRepo := repository.New("ro", "misc/datastore/ro.txt")
 
 	svc := NewSwears([]SwearsRepo{
 		roRepo,

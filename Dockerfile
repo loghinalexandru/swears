@@ -6,8 +6,6 @@ WORKDIR /app
 
 COPY ../ .
 
-RUN apk add pkgconfig alsa-tools-dev
-
 RUN go mod download
 RUN go build -o /swears ./
 
@@ -22,4 +20,4 @@ COPY --link --from=build /app/misc /misc
 
 EXPOSE 3000
 
-ENTRYPOINT ["/resonator"]
+ENTRYPOINT ["/swears"]
