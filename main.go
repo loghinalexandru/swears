@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+
+	"github.com/loghinalexandru/swears/repository"
 )
 
 type handler func(w http.ResponseWriter, r *http.Request)
@@ -42,9 +44,13 @@ func randomHandler(svc SwearsSvc) handler {
 }
 
 func main() {
-	svc := NewSwears()
-	mux := http.NewServeMux()
+	roRepo := repository.New("ro", "misc/ro.txt")
 
+	svc := NewSwears([]SwearsRepo{
+		roRepo,
+	})
+
+	mux := http.NewServeMux()
 	mux.HandleFunc("/api/random", randomHandler(svc))
 
 	http.ListenAndServe(":3000", mux)

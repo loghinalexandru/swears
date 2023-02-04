@@ -1,7 +1,5 @@
 package main
 
-import "github.com/loghinalexandru/swears/repository"
-
 type SwearsRepo interface {
 	Get() string
 	Lang() string
@@ -12,13 +10,14 @@ type SwearsSvc struct {
 	data map[string]SwearsRepo
 }
 
-func NewSwears() SwearsSvc {
+func NewSwears(repos []SwearsRepo) SwearsSvc {
 	result := SwearsSvc{
 		data: make(map[string]SwearsRepo),
 	}
 
-	repo := repository.New("ro", "misc/ro.txt")
-	result.data[repo.Lang()] = repo
+	for _, repo := range repos {
+		result.data[repo.Lang()] = repo
+	}
 
 	return result
 }
