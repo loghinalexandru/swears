@@ -13,14 +13,16 @@ import (
 )
 
 type fileDB struct {
-	lang string
-	data []models.Record
+	lang      string
+	generator *rand.Rand
+	data      []models.Record
 }
 
 func New(language string, path string) *fileDB {
 	db := &fileDB{
-		lang: language,
-		data: []models.Record{},
+		lang:      language,
+		generator: rand.New(rand.NewSource(time.Now().UnixMicro())),
+		data:      []models.Record{},
 	}
 	db.load(path)
 
@@ -32,9 +34,7 @@ func (db *fileDB) Lang() string {
 }
 
 func (db *fileDB) Get() models.Record {
-	gen := rand.New(rand.NewSource(time.Now().UnixMicro()))
-	index := gen.Intn(len(db.data))
-
+	index := db.generator.Intn(len(db.data))
 	return db.data[index]
 }
 
