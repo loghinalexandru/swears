@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/loghinalexandru/swears/models"
 )
 
@@ -21,7 +22,7 @@ func New(language string, path string) *fileDB {
 		lang: language,
 		data: []models.Record{},
 	}
-	db.Load(path)
+	db.load(path)
 
 	return db
 }
@@ -31,13 +32,13 @@ func (db *fileDB) Lang() string {
 }
 
 func (db *fileDB) Get() models.Record {
-	gen := rand.New(rand.NewSource(time.Now().UnixMilli()))
+	gen := rand.New(rand.NewSource(time.Now().UnixMicro()))
 	index := gen.Intn(len(db.data))
 
 	return db.data[index]
 }
 
-func (db *fileDB) Load(filePath string) {
+func (db *fileDB) load(filePath string) {
 	_, err := os.Stat(filePath)
 
 	if errors.Is(err, os.ErrNotExist) {
@@ -54,13 +55,10 @@ func (db *fileDB) Load(filePath string) {
 	scaner := bufio.NewScanner(fh)
 	scaner.Split(bufio.ScanLines)
 
-	var i int
 	for scaner.Scan() {
 		db.data = append(db.data, models.Record{
-			Index: i,
+			ID:    uuid.New(),
 			Value: scaner.Text(),
 		})
-
-		i++
 	}
 }

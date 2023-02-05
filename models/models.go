@@ -1,6 +1,10 @@
 package models
 
+import (
+	"github.com/google/uuid"
+)
+
 type Record struct {
-	Index int
+	ID    uuid.UUID
 	Value string
 }
