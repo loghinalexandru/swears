@@ -62,9 +62,11 @@ func soundFileHandler(svc *SwearsSvc) http.HandlerFunc {
 
 func main() {
 	roRepo := repository.New("ro", "misc/datastore/ro.txt")
+	frRepo := repository.New("fr", "misc/datastore/fr.txt")
 
 	svc := NewSwears([]SwearsRepo{
 		roRepo,
+		frRepo,
 	})
 
 	mux := http.NewServeMux()
