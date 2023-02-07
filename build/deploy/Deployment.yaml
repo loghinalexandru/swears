@@ -16,11 +16,11 @@ spec:
     spec:
       containers:
         - name: swears
-          image: ghcr.io/loghinalexandru/swears.api:0.1.0
+          image: ghcr.io/loghinalexandru/swears.api:latest
           imagePullPolicy: Always
           resources:
             requests:
-              cpu: 250m
+              cpu: 100m
               memory: 64Mi
             limits:
               memory: 64Mi
