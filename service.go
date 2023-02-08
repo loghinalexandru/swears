@@ -51,17 +51,18 @@ func (svc *SwearsSvc) GetSwear(lang string) string {
 
 func (svc *SwearsSvc) GetSwearFile(lang string, opus bool) []byte {
 	var result []byte
-	repo, exits := svc.data[lang]
+	repo, exists := svc.data[lang]
 
-	if !exits {
+	if !exists {
 		return result
 	}
 
-	fname := fmt.Sprintf("misc/%s.mp3", repo.Get().ID)
+	swear := repo.Get()
+	fname := fmt.Sprintf("misc/%s.mp3", swear.ID)
 	_, err := os.Stat(fname)
 
 	if os.IsNotExist(err) {
-		svc.downloadTTSFile(fname, repo.Get().Value, lang)
+		svc.downloadTTSFile(fname, swear.Value, lang)
 	}
 
 	if opus {
@@ -73,7 +74,7 @@ func (svc *SwearsSvc) GetSwearFile(lang string, opus bool) []byte {
 			fmt.Println(err)
 		}
 
-		fname = fmt.Sprintf("misc/%s.dca", repo.Get().ID)
+		fname = fmt.Sprintf("misc/%s.dca", swear.ID)
 		output, err := os.Create(fname)
 		if err != nil {
 			panic(err)

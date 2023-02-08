@@ -21,7 +21,7 @@ type fileDB struct {
 func New(language string, path string) *fileDB {
 	db := &fileDB{
 		lang:      language,
-		generator: rand.New(rand.NewSource(time.Now().UnixMicro())),
+		generator: rand.New(rand.NewSource(time.Now().UnixNano())),
 		data:      []models.Record{},
 	}
 	db.load(path)
