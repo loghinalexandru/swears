@@ -22,10 +22,11 @@ func randomHandler(svc *SwearsSvc) http.HandlerFunc {
 			lang = r.URL.Query().Get("lang")
 		}
 
-		swear := svc.GetSwear(lang)
+		swear, err := svc.GetSwear(lang)
 
-		if swear == "" {
-			w.WriteHeader(http.StatusNotFound)
+		if err != nil {
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
@@ -35,7 +36,7 @@ func randomHandler(svc *SwearsSvc) http.HandlerFunc {
 		})
 
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
 
 		w.Write(res)
@@ -56,6 +57,12 @@ func soundFileHandler(svc *SwearsSvc) http.HandlerFunc {
 		}
 
 		result := svc.GetSwearFile(lang, encode)
+
+		if result == nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
 		w.Write(result)
 	}, "application/octet-stream")
 }
@@ -65,11 +72,11 @@ func main() {
 	frRepo := repository.New("fr", "misc/datastore/fr.txt")
 	enRepo := repository.New("en", "misc/datastore/en.txt")
 
-	svc := NewSwears([]SwearsRepo{
+	svc := NewSwearsSvc([]SwearsRepo{
 		roRepo,
 		frRepo,
 		enRepo,
-	})
+	}, http.DefaultClient)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/random", randomHandler(svc))

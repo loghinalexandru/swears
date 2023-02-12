@@ -12,6 +12,10 @@ import (
 	"github.com/loghinalexandru/swears/models"
 )
 
+const (
+	emptyDataStore = "Empty data store!"
+)
+
 type fileDB struct {
 	lang      string
 	generator *rand.Rand
@@ -33,13 +37,13 @@ func (db *fileDB) Lang() string {
 	return db.lang
 }
 
-func (db *fileDB) Get() *models.Record {
+func (db *fileDB) Get() (models.Record, error) {
 	if len(db.data) == 0 {
-		return nil
+		return models.Record{}, errors.New(emptyDataStore)
 	}
 
 	index := db.generator.Intn(len(db.data))
-	return &db.data[index]
+	return db.data[index], nil
 }
 
 func (db *fileDB) load(filePath string) {

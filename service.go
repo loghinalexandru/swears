@@ -1,8 +1,10 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -13,23 +15,26 @@ import (
 )
 
 const (
-	ttsURL = "http://translate.google.com/translate_tts?ie=UTF-8&total=1&idx=0&textlen=32&client=tw-ob&q=%s&tl=%s"
+	missingRepo = "Missing repository for asked language!"
+	ttsURL      = "http://translate.google.com/translate_tts?ie=UTF-8&total=1&idx=0&textlen=32&client=tw-ob&q=%s&tl=%s"
 )
 
 type SwearsRepo interface {
-	Get() *models.Record
+	Get() (models.Record, error)
 	Lang() string
 }
 
 type SwearsSvc struct {
-	mtx  sync.Mutex
-	data map[string]SwearsRepo
+	client *http.Client
+	mtx    sync.Mutex
+	data   map[string]SwearsRepo
 }
 
-func NewSwears(repos []SwearsRepo) *SwearsSvc {
+func NewSwearsSvc(repos []SwearsRepo, client *http.Client) *SwearsSvc {
 	result := SwearsSvc{
-		mtx:  sync.Mutex{},
-		data: make(map[string]SwearsRepo),
+		client: client,
+		mtx:    sync.Mutex{},
+		data:   make(map[string]SwearsRepo),
 	}
 
 	for _, repo := range repos {
@@ -39,14 +44,20 @@ func NewSwears(repos []SwearsRepo) *SwearsSvc {
 	return &result
 }
 
-func (svc *SwearsSvc) GetSwear(lang string) string {
-	repo, exits := svc.data[lang]
+func (svc *SwearsSvc) GetSwear(lang string) (string, error) {
+	repo, exists := svc.data[lang]
 
-	if !exits {
-		return ""
+	if !exists {
+		return "", errors.New(missingRepo)
 	}
 
-	return repo.Get().Value
+	res, err := repo.Get()
+
+	if err != nil {
+		return "", err
+	}
+
+	return res.Value, nil
 }
 
 func (svc *SwearsSvc) GetSwearFile(lang string, opus bool) []byte {
@@ -57,9 +68,15 @@ func (svc *SwearsSvc) GetSwearFile(lang string, opus bool) []byte {
 		return result
 	}
 
-	swear := repo.Get()
+	swear, err := repo.Get()
+
+	if err != nil {
+		log.Println(err)
+		return result
+	}
+
 	fname := fmt.Sprintf("misc/%s.mp3", swear.ID)
-	_, err := os.Stat(fname)
+	_, err = os.Stat(fname)
 
 	if os.IsNotExist(err) {
 		svc.downloadTTSFile(fname, swear.Value, lang)
@@ -70,15 +87,16 @@ func (svc *SwearsSvc) GetSwearFile(lang string, opus bool) []byte {
 		encdOpt.RawOutput = true
 		encodeSession, err := dca.EncodeFile(fname, encdOpt)
 
-		//Add logging
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
+			return nil
 		}
 
 		fname = fmt.Sprintf("misc/%s.dca", swear.ID)
 		output, err := os.Create(fname)
 		if err != nil {
-			panic(err)
+			log.Println(err)
+			return nil
 		}
 
 		io.Copy(output, encodeSession)
@@ -88,7 +106,8 @@ func (svc *SwearsSvc) GetSwearFile(lang string, opus bool) []byte {
 
 	result, err = os.ReadFile(fname)
 	if err != nil {
-		panic(err)
+		log.Println(err)
+		return nil
 	}
 
 	return result
@@ -96,7 +115,8 @@ func (svc *SwearsSvc) GetSwearFile(lang string, opus bool) []byte {
 
 func (svc *SwearsSvc) downloadTTSFile(fileName string, text string, lang string) error {
 	url := fmt.Sprintf(ttsURL, url.QueryEscape(text), lang)
-	response, err := http.Get(url)
+
+	response, err := svc.client.Get(url)
 	if err != nil {
 		return err
 	}

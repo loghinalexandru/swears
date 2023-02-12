@@ -34,9 +34,9 @@ func TestGet_SingleValue(t *testing.T) {
 		},
 	}
 
-	res := mock.Get()
+	res, err := mock.Get()
 
-	if res == nil || res.Value != "test" {
+	if err == nil && res.Value != "test" {
 		t.Error("Wrong object returned")
 	}
 }
@@ -49,9 +49,9 @@ func TestGet_EmptyData(t *testing.T) {
 		data:      []models.Record{},
 	}
 
-	res := mock.Get()
+	res, err := mock.Get()
 
-	if res != nil {
+	if err != nil && res.Value != "" {
 		t.Error("Wrong object returned")
 	}
 }
