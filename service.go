@@ -17,7 +17,7 @@ const (
 )
 
 type SwearsRepo interface {
-	Get() models.Record
+	Get() *models.Record
 	Lang() string
 }
 
@@ -70,6 +70,7 @@ func (svc *SwearsSvc) GetSwearFile(lang string, opus bool) []byte {
 		encdOpt.RawOutput = true
 		encodeSession, err := dca.EncodeFile(fname, encdOpt)
 
+		//Add logging
 		if err != nil {
 			fmt.Println(err)
 		}

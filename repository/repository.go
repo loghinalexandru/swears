@@ -33,9 +33,13 @@ func (db *fileDB) Lang() string {
 	return db.lang
 }
 
-func (db *fileDB) Get() models.Record {
+func (db *fileDB) Get() *models.Record {
+	if len(db.data) == 0 {
+		return nil
+	}
+
 	index := db.generator.Intn(len(db.data))
-	return db.data[index]
+	return &db.data[index]
 }
 
 func (db *fileDB) load(filePath string) {
