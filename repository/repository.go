@@ -17,11 +17,11 @@ const (
 
 type fileDB struct {
 	lang   string
-	logger log.Logger
+	logger *log.Logger
 	data   []models.Record
 }
 
-func New(logger log.Logger, language string, path string) *fileDB {
+func New(logger *log.Logger, language string, path string) *fileDB {
 	db := &fileDB{
 		lang:   language,
 		logger: logger,

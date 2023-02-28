@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
+	"github.com/google/uuid"
 	"github.com/loghinalexandru/swears/repository"
 )
 
@@ -14,7 +17,7 @@ type Response struct {
 	Lang  string `json:"lang"`
 }
 
-func randomHandler(svc *SwearsSvc) http.HandlerFunc {
+func randomHandler(svc *SwearsSvc, logger *log.Logger) http.HandlerFunc {
 	return contentType(func(w http.ResponseWriter, r *http.Request) {
 		lang := "en"
 
@@ -25,7 +28,7 @@ func randomHandler(svc *SwearsSvc) http.HandlerFunc {
 		swear, err := svc.GetSwear(lang)
 
 		if err != nil {
-			log.Println(err)
+			logger.Println(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -36,14 +39,14 @@ func randomHandler(svc *SwearsSvc) http.HandlerFunc {
 		})
 
 		if err != nil {
-			log.Println(err)
+			logger.Println(err)
 		}
 
 		w.Write(res)
 	}, "application/json")
 }
 
-func soundFileHandler(svc *SwearsSvc) http.HandlerFunc {
+func soundFileHandler(svc *SwearsSvc, logger *log.Logger) http.HandlerFunc {
 	return contentType(func(w http.ResponseWriter, r *http.Request) {
 		lang := "en"
 		encode := false
@@ -68,7 +71,7 @@ func soundFileHandler(svc *SwearsSvc) http.HandlerFunc {
 }
 
 func main() {
-	logger := getLogger()
+	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lshortfile)
 	roRepo := repository.New(logger, "ro", "misc/datastore/ro.txt")
 	frRepo := repository.New(logger, "fr", "misc/datastore/fr.txt")
 	enRepo := repository.New(logger, "en", "misc/datastore/en.txt")
@@ -80,8 +83,8 @@ func main() {
 	}, http.DefaultClient)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/random", tracing(logger, randomHandler(svc)))
-	mux.HandleFunc("/api/random/file", tracing(logger, soundFileHandler(svc)))
+	mux.HandleFunc("/api/random", tracing(logger, randomHandler(svc, logger)))
+	mux.HandleFunc("/api/random/file", tracing(logger, soundFileHandler(svc, logger)))
 
 	server := http.Server{
 		Addr:    ":3000",
@@ -91,13 +94,6 @@ func main() {
 	server.ListenAndServe()
 }
 
-func getLogger() log.Logger {
-	stdLogger := log.Default()
-	stdLogger.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
-
-	return *stdLogger
-}
-
 func contentType(next http.HandlerFunc, mediaType string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", mediaType)
@@ -105,9 +101,11 @@ func contentType(next http.HandlerFunc, mediaType string) http.HandlerFunc {
 	}
 }
 
-func tracing(logger log.Logger, next http.HandlerFunc) http.HandlerFunc {
+func tracing(logger *log.Logger, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("Calling endpoint %v", r.URL)
+		traceId := uuid.New()
+		r.WithContext(context.WithValue(r.Context(), "traceID", traceId))
+		logger.Printf("Calling endpoint %v with ID %v", r.URL, traceId)
 		next(w, r)
 	}
 }

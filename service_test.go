@@ -40,13 +40,12 @@ func TestDownloadTTSFile(t *testing.T) {
 	defer os.Remove(testFile)
 
 	if err != nil {
-		t.Error("This should be nil!")
-		t.FailNow()
+		t.Fatal("This should be nil!")
 	}
 
 	data, err := os.ReadFile(testFile)
 
 	if err != nil || string(data) != "OK" {
-		t.Error("File not created")
+		t.Fatal("File not created")
 	}
 }
