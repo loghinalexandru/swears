@@ -6,7 +6,6 @@ import (
 	"log"
 	"math/rand"
 	"os"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/loghinalexandru/swears/models"
@@ -17,16 +16,16 @@ const (
 )
 
 type fileDB struct {
-	lang      string
-	generator *rand.Rand
-	data      []models.Record
+	lang   string
+	logger log.Logger
+	data   []models.Record
 }
 
-func New(language string, path string) *fileDB {
+func New(logger log.Logger, language string, path string) *fileDB {
 	db := &fileDB{
-		lang:      language,
-		generator: rand.New(rand.NewSource(time.Now().UnixNano())),
-		data:      []models.Record{},
+		lang:   language,
+		logger: logger,
+		data:   []models.Record{},
 	}
 	db.load(path)
 
@@ -42,7 +41,7 @@ func (db *fileDB) Get() (models.Record, error) {
 		return models.Record{}, errors.New(emptyDataStore)
 	}
 
-	index := db.generator.Intn(len(db.data))
+	index := rand.Intn(len(db.data))
 	return db.data[index], nil
 }
 
@@ -57,7 +56,7 @@ func (db *fileDB) load(filePath string) {
 	defer fh.Close()
 
 	if err != nil {
-		log.Fatal("Could not open file!")
+		db.logger.Fatal("Could not open file!")
 	}
 
 	scaner := bufio.NewScanner(fh)

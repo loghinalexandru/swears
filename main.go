@@ -68,9 +68,10 @@ func soundFileHandler(svc *SwearsSvc) http.HandlerFunc {
 }
 
 func main() {
-	roRepo := repository.New("ro", "misc/datastore/ro.txt")
-	frRepo := repository.New("fr", "misc/datastore/fr.txt")
-	enRepo := repository.New("en", "misc/datastore/en.txt")
+	logger := getLogger()
+	roRepo := repository.New(logger, "ro", "misc/datastore/ro.txt")
+	frRepo := repository.New(logger, "fr", "misc/datastore/fr.txt")
+	enRepo := repository.New(logger, "en", "misc/datastore/en.txt")
 
 	svc := NewSwearsSvc([]SwearsRepo{
 		roRepo,
@@ -79,8 +80,8 @@ func main() {
 	}, http.DefaultClient)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/random", randomHandler(svc))
-	mux.HandleFunc("/api/random/file", soundFileHandler(svc))
+	mux.HandleFunc("/api/random", tracing(logger, randomHandler(svc)))
+	mux.HandleFunc("/api/random/file", tracing(logger, soundFileHandler(svc)))
 
 	server := http.Server{
 		Addr:    ":3000",
@@ -90,9 +91,23 @@ func main() {
 	server.ListenAndServe()
 }
 
+func getLogger() log.Logger {
+	stdLogger := log.Default()
+	stdLogger.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+
+	return *stdLogger
+}
+
 func contentType(next http.HandlerFunc, mediaType string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", mediaType)
+		next(w, r)
+	}
+}
+
+func tracing(logger log.Logger, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("Calling endpoint %v", r.URL)
 		next(w, r)
 	}
 }

@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"math/rand"
 	"testing"
 
 	"github.com/loghinalexandru/swears/models"
@@ -26,7 +25,6 @@ func TestGet_SingleValue(t *testing.T) {
 	t.Parallel()
 
 	mock := fileDB{
-		generator: rand.New(rand.NewSource(12)),
 		data: []models.Record{
 			{
 				Value: "test",
@@ -45,8 +43,7 @@ func TestGet_EmptyData(t *testing.T) {
 	t.Parallel()
 
 	mock := fileDB{
-		generator: rand.New(rand.NewSource(12)),
-		data:      []models.Record{},
+		data: []models.Record{},
 	}
 
 	res, err := mock.Get()
