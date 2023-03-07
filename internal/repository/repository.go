@@ -8,11 +8,11 @@ import (
 	"os"
 
 	"github.com/google/uuid"
-	"github.com/loghinalexandru/swears/models"
+	"github.com/loghinalexandru/swears/internal/models"
 )
 
 const (
-	emptyDataStore = "Empty data store!"
+	emptyDataStore = "empty data store"
 )
 
 type fileDB struct {
@@ -53,11 +53,11 @@ func (db *fileDB) load(filePath string) {
 	}
 
 	fh, err := os.Open(filePath)
-	defer fh.Close()
-
 	if err != nil {
 		db.logger.Fatal("Could not open file!")
 	}
+
+	defer fh.Close()
 
 	scaner := bufio.NewScanner(fh)
 	scaner.Split(bufio.ScanLines)

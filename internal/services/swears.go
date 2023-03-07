@@ -1,4 +1,4 @@
-package main
+package services
 
 import (
 	"errors"
@@ -11,30 +11,25 @@ import (
 	"sync"
 
 	"github.com/jonas747/dca"
-	"github.com/loghinalexandru/swears/models"
+	"github.com/loghinalexandru/swears/internal/models"
 )
 
 const (
-	missingRepo = "Missing repository for asked language!"
+	missingRepo = "missing repository for asked language"
 	ttsURL      = "http://translate.google.com/translate_tts?ie=UTF-8&total=1&idx=0&textlen=32&client=tw-ob&q=%s&tl=%s"
 )
 
-type SwearsRepo interface {
-	Get() (models.Record, error)
-	Lang() string
-}
-
-type SwearsSvc struct {
+type Swears struct {
 	client *http.Client
 	mtx    sync.Mutex
-	data   map[string]SwearsRepo
+	data   map[string]models.SwearsRepo
 }
 
-func NewSwearsSvc(repos []SwearsRepo, client *http.Client) *SwearsSvc {
-	result := SwearsSvc{
+func NewSwears(repos []models.SwearsRepo, client *http.Client) *Swears {
+	result := Swears{
 		client: client,
 		mtx:    sync.Mutex{},
-		data:   make(map[string]SwearsRepo),
+		data:   make(map[string]models.SwearsRepo),
 	}
 
 	for _, repo := range repos {
@@ -44,7 +39,7 @@ func NewSwearsSvc(repos []SwearsRepo, client *http.Client) *SwearsSvc {
 	return &result
 }
 
-func (svc *SwearsSvc) GetSwear(lang string) (string, error) {
+func (svc *Swears) GetSwear(lang string) (string, error) {
 	repo, exists := svc.data[lang]
 
 	if !exists {
@@ -60,7 +55,7 @@ func (svc *SwearsSvc) GetSwear(lang string) (string, error) {
 	return res.Value, nil
 }
 
-func (svc *SwearsSvc) GetSwearFile(lang string, opus bool) []byte {
+func (svc *Swears) GetSwearFile(lang string, opus bool) []byte {
 	var result []byte
 	repo, exists := svc.data[lang]
 
@@ -113,7 +108,7 @@ func (svc *SwearsSvc) GetSwearFile(lang string, opus bool) []byte {
 	return result
 }
 
-func (svc *SwearsSvc) downloadTTSFile(fileName string, text string, lang string) error {
+func (svc *Swears) downloadTTSFile(fileName string, text string, lang string) error {
 	url := fmt.Sprintf(ttsURL, url.QueryEscape(text), lang)
 
 	response, err := svc.client.Get(url)
@@ -130,6 +125,8 @@ func (svc *SwearsSvc) downloadTTSFile(fileName string, text string, lang string)
 		return err
 	}
 
+	defer output.Close()
 	_, err = io.Copy(output, response.Body)
+
 	return err
 }

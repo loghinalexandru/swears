@@ -1,4 +1,4 @@
-package main
+package services
 
 import (
 	"bytes"
@@ -30,7 +30,7 @@ func TestDownloadTTSFile(t *testing.T) {
 		}
 	})
 
-	mock := SwearsSvc{
+	mock := Swears{
 		client: client,
 		mtx:    sync.Mutex{},
 	}

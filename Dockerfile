@@ -9,7 +9,7 @@ COPY ../ .
 RUN go mod download
 RUN go build -o /swears ./
 
-FROM golang:1.19-alpine
+FROM golang:1.20-alpine
 
 RUN apk update && apk add ffmpeg
 

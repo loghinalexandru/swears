@@ -3,7 +3,7 @@ package repository
 import (
 	"testing"
 
-	"github.com/loghinalexandru/swears/models"
+	"github.com/loghinalexandru/swears/internal/models"
 )
 
 func TestLang(t *testing.T) {
