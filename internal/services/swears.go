@@ -20,16 +20,18 @@ const (
 )
 
 type Swears struct {
-	client *http.Client
-	mtx    sync.Mutex
-	data   map[string]models.SwearsRepo
+	basePath string
+	client   *http.Client
+	mtx      sync.Mutex
+	data     map[string]models.SwearsRepo
 }
 
-func NewSwears(repos []models.SwearsRepo, client *http.Client) *Swears {
+func NewSwears(repos []models.SwearsRepo, client *http.Client, basePath string) *Swears {
 	result := Swears{
-		client: client,
-		mtx:    sync.Mutex{},
-		data:   make(map[string]models.SwearsRepo),
+		basePath: basePath,
+		client:   client,
+		mtx:      sync.Mutex{},
+		data:     make(map[string]models.SwearsRepo),
 	}
 
 	for _, repo := range repos {
@@ -70,7 +72,7 @@ func (svc *Swears) GetSwearFile(lang string, opus bool) []byte {
 		return result
 	}
 
-	fname := fmt.Sprintf("misc/%s.mp3", swear.ID)
+	fname := fmt.Sprintf("%s/%s.mp3", svc.basePath, swear.ID)
 	_, err = os.Stat(fname)
 
 	if os.IsNotExist(err) {
@@ -87,7 +89,7 @@ func (svc *Swears) GetSwearFile(lang string, opus bool) []byte {
 			return nil
 		}
 
-		fname = fmt.Sprintf("misc/%s.dca", swear.ID)
+		fname = fmt.Sprintf("%s/%s.dca", svc.basePath, swear.ID)
 		output, err := os.Create(fname)
 		if err != nil {
 			log.Println(err)

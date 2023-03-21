@@ -17,11 +17,14 @@ func main() {
 	frRepo := repository.New(logger, "fr", "misc/datastore/fr.txt")
 	enRepo := repository.New(logger, "en", "misc/datastore/en.txt")
 
-	svc := services.NewSwears([]models.SwearsRepo{
-		roRepo,
-		frRepo,
-		enRepo,
-	}, http.DefaultClient)
+	svc := services.NewSwears(
+		[]models.SwearsRepo{
+			roRepo,
+			frRepo,
+			enRepo,
+		},
+		http.DefaultClient,
+		"misc")
 
 	handler := handlers.NewRandom(logger, svc)
 
