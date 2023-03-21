@@ -87,6 +87,9 @@ func TestGetSwearFileWithError(t *testing.T) {
 
 func TestGetSwearFilePlain(t *testing.T) {
 	t.Parallel()
+	testRepos := []models.SwearsRepo{TestRepo{}}
+	tempDirPath := t.TempDir()
+	swearRecord, _ := testRepos[0].Get()
 
 	client := newTestClient(func(req *http.Request) *http.Response {
 		return &http.Response{
@@ -96,11 +99,41 @@ func TestGetSwearFilePlain(t *testing.T) {
 		}
 	})
 
-	target := NewSwears([]models.SwearsRepo{TestRepo{}}, client, t.TempDir())
+	target := NewSwears(testRepos, client, tempDirPath)
+	got := target.GetSwearFile("en", false)
+
+	if got == nil {
+		t.Fatal("buffer is empty")
+	}
+
+	if _, err := os.Stat(tempDirPath + "/" + swearRecord.ID.String() + ".mp3"); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestGetSwearFileEncoded(t *testing.T) {
+	t.Parallel()
+	testRepos := []models.SwearsRepo{TestRepo{}}
+	tempDirPath := t.TempDir()
+	swearRecord, _ := testRepos[0].Get()
+
+	client := newTestClient(func(req *http.Request) *http.Response {
+		return &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(bytes.NewBufferString(`OK`)),
+			Header:     make(http.Header),
+		}
+	})
+
+	target := NewSwears(testRepos, client, tempDirPath)
 	got := target.GetSwearFile("en", true)
 
 	if got == nil {
-		t.Error("buffer is empty")
+		t.Fatal("buffer is empty")
+	}
+
+	if _, err := os.Stat(tempDirPath + "/" + swearRecord.ID.String() + ".dca"); err != nil {
+		t.Error(err)
 	}
 }
 
