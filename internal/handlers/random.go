@@ -2,11 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/loghinalexandru/swears/internal/services"
+	"github.com/rs/zerolog"
 )
 
 type Response struct {
@@ -15,11 +15,11 @@ type Response struct {
 }
 
 type HTTPHandler struct {
-	logger *log.Logger
+	logger zerolog.Logger
 	swears *services.Swears
 }
 
-func NewRandom(logger *log.Logger, svc *services.Swears) *HTTPHandler {
+func NewRandom(logger zerolog.Logger, svc *services.Swears) *HTTPHandler {
 	return &HTTPHandler{
 		logger: logger,
 		swears: svc,
@@ -36,7 +36,7 @@ func (handler *HTTPHandler) Random(writer http.ResponseWriter, request *http.Req
 	swear, err := handler.swears.GetSwear(lang)
 
 	if err != nil {
-		handler.logger.Println(err)
+		handler.logger.Err(err).Send()
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -47,7 +47,7 @@ func (handler *HTTPHandler) Random(writer http.ResponseWriter, request *http.Req
 	})
 
 	if err != nil {
-		handler.logger.Println(err)
+		handler.logger.Err(err).Send()
 	}
 
 	writer.Write(res)
