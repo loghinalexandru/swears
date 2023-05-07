@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -12,24 +11,32 @@ import (
 
 	"github.com/jonas747/dca"
 	"github.com/loghinalexandru/swears/internal/models"
+	"github.com/rs/zerolog"
+)
+
+var (
+	errMissingRepo = errors.New("missing repository for asked language")
 )
 
 const (
-	missingRepo = "missing repository for asked language"
-	ttsURL      = "http://translate.google.com/translate_tts?ie=UTF-8&total=1&idx=0&textlen=32&client=tw-ob&q=%s&tl=%s"
+	ttsURL = "http://translate.google.com/translate_tts?ie=UTF-8&total=1&idx=0&textlen=32&client=tw-ob&q=%s&tl=%s"
 )
+
+type swearsOpt func(*Swears)
 
 type Swears struct {
 	downloadPath string
+	logger       zerolog.Logger
 	client       *http.Client
 	mtx          sync.Mutex
 	data         map[string]models.SwearsRepo
 }
 
-func NewSwears(repos []models.SwearsRepo, client *http.Client, downloadPath string) *Swears {
-	result := Swears{
+func NewSwears(repos []models.SwearsRepo, downloadPath string, opts ...swearsOpt) *Swears {
+	result := &Swears{
 		downloadPath: downloadPath,
-		client:       client,
+		client:       http.DefaultClient,
+		logger:       zerolog.Nop().With().Logger(),
 		mtx:          sync.Mutex{},
 		data:         make(map[string]models.SwearsRepo),
 	}
@@ -38,14 +45,30 @@ func NewSwears(repos []models.SwearsRepo, client *http.Client, downloadPath stri
 		result.data[repo.Lang()] = repo
 	}
 
-	return &result
+	for _, opt := range opts {
+		opt(result)
+	}
+
+	return result
+}
+
+func WithLogger(logger zerolog.Logger) swearsOpt {
+	return func(s *Swears) {
+		s.logger = logger
+	}
+}
+
+func WithClient(client *http.Client) swearsOpt {
+	return func(s *Swears) {
+		s.client = client
+	}
 }
 
 func (svc *Swears) GetSwear(lang string) (string, error) {
 	repo, exists := svc.data[lang]
 
 	if !exists {
-		return "", errors.New(missingRepo)
+		return "", errMissingRepo
 	}
 
 	res, err := repo.Get()
@@ -68,7 +91,7 @@ func (svc *Swears) GetSwearFile(lang string, opus bool) []byte {
 	swear, err := repo.Get()
 
 	if err != nil {
-		log.Println(err)
+		svc.logger.Err(err).Send()
 		return result
 	}
 
@@ -85,14 +108,14 @@ func (svc *Swears) GetSwearFile(lang string, opus bool) []byte {
 		encodeSession, err := dca.EncodeFile(fname, encdOpt)
 
 		if err != nil {
-			log.Println(err)
+			svc.logger.Err(err).Send()
 			return nil
 		}
 
 		fname = fmt.Sprintf("%s/%s.dca", svc.downloadPath, swear.ID)
 		output, err := os.Create(fname)
 		if err != nil {
-			log.Println(err)
+			svc.logger.Err(err).Send()
 			return nil
 		}
 
@@ -103,7 +126,7 @@ func (svc *Swears) GetSwearFile(lang string, opus bool) []byte {
 
 	result, err = os.ReadFile(fname)
 	if err != nil {
-		log.Println(err)
+		svc.logger.Err(err).Send()
 		return nil
 	}
 

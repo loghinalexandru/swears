@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"os"
 
@@ -9,10 +8,20 @@ import (
 	"github.com/loghinalexandru/swears/internal/models"
 	"github.com/loghinalexandru/swears/internal/repository"
 	"github.com/loghinalexandru/swears/internal/services"
+	"github.com/rs/zerolog"
+)
+
+const (
+	storagePath = "misc"
 )
 
 func main() {
-	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lshortfile)
+	logger := zerolog.New(os.Stderr).With().
+		Timestamp().
+		Caller().
+		Logger().
+		Level(zerolog.InfoLevel)
+
 	roRepo := repository.New(logger, "ro", "misc/datastore/ro.txt")
 	frRepo := repository.New(logger, "fr", "misc/datastore/fr.txt")
 	enRepo := repository.New(logger, "en", "misc/datastore/en.txt")
@@ -23,20 +32,22 @@ func main() {
 			frRepo,
 			enRepo,
 		},
-		http.DefaultClient,
-		"misc")
+		storagePath,
+		services.WithLogger(logger),
+	)
 
 	handler := handlers.NewRandom(logger, svc)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/random", tracing(logger, contentType(handler.Random, "application/json")))
-	mux.HandleFunc("/api/random/file", tracing(logger, contentType(handler.RandomFile, "application/octet-stream")))
+	mux.HandleFunc("/api/random", logRoute(logger, contentType(handler.Random, "application/json")))
+	mux.HandleFunc("/api/random/file", logRoute(logger, contentType(handler.RandomFile, "application/octet-stream")))
 
 	server := http.Server{
 		Addr:    ":3000",
 		Handler: mux,
 	}
 
+	logger.Info().Msgf("Server starting on address %v", server.Addr)
 	server.ListenAndServe()
 }
 
@@ -47,9 +58,14 @@ func contentType(next http.HandlerFunc, mediaType string) http.HandlerFunc {
 	}
 }
 
-func tracing(logger *log.Logger, next http.HandlerFunc) http.HandlerFunc {
+func logRoute(logger zerolog.Logger, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		logger.Printf("Calling endpoint %v", r.URL)
+		logger.Info().
+			Str("method", r.Method).
+			Str("addr", r.RemoteAddr).
+			Str("agent", r.UserAgent()).
+			Str("URL", r.URL.Path).
+			Msg("Request received")
 		next(w, r)
 	}
 }

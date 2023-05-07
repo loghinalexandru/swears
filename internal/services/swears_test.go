@@ -15,7 +15,7 @@ import (
 func TestNew(t *testing.T) {
 	t.Parallel()
 
-	got := NewSwears([]models.SwearsRepo{TestRepo{}}, http.DefaultClient, "")
+	got := NewSwears([]models.SwearsRepo{TestRepo{}}, "")
 
 	if got.data != nil && got.data["en"] == nil {
 		t.Error("different repositories")
@@ -29,7 +29,7 @@ func TestNew(t *testing.T) {
 func TestGetSwear(t *testing.T) {
 	t.Parallel()
 
-	target := NewSwears([]models.SwearsRepo{TestRepo{}}, http.DefaultClient, "")
+	target := NewSwears([]models.SwearsRepo{TestRepo{}}, "")
 	got, err := target.GetSwear("en")
 
 	if err != nil {
@@ -44,7 +44,7 @@ func TestGetSwear(t *testing.T) {
 func TestGetSwearWithInvalidLanguage(t *testing.T) {
 	t.Parallel()
 
-	target := NewSwears([]models.SwearsRepo{TestRepoWithError{}}, http.DefaultClient, "")
+	target := NewSwears([]models.SwearsRepo{TestRepoWithError{}}, "")
 	_, err := target.GetSwear("en")
 
 	if err == nil {
@@ -55,7 +55,7 @@ func TestGetSwearWithInvalidLanguage(t *testing.T) {
 func TestGetSwearWithRepoError(t *testing.T) {
 	t.Parallel()
 
-	target := NewSwears([]models.SwearsRepo{TestRepo{}}, http.DefaultClient, "")
+	target := NewSwears([]models.SwearsRepo{TestRepo{}}, "")
 	_, err := target.GetSwear("invalid language")
 
 	if err == nil {
@@ -66,7 +66,7 @@ func TestGetSwearWithRepoError(t *testing.T) {
 func TestGetSwearFileWithInvalidLanguage(t *testing.T) {
 	t.Parallel()
 
-	target := NewSwears([]models.SwearsRepo{TestRepo{}}, http.DefaultClient, "")
+	target := NewSwears([]models.SwearsRepo{TestRepo{}}, "")
 	got := target.GetSwearFile("invalid language", false)
 
 	if got != nil {
@@ -77,7 +77,7 @@ func TestGetSwearFileWithInvalidLanguage(t *testing.T) {
 func TestGetSwearFileWithError(t *testing.T) {
 	t.Parallel()
 
-	target := NewSwears([]models.SwearsRepo{TestRepoWithError{}}, http.DefaultClient, "")
+	target := NewSwears([]models.SwearsRepo{TestRepoWithError{}}, "")
 	got := target.GetSwearFile("en", false)
 
 	if got != nil {
@@ -99,7 +99,7 @@ func TestGetSwearFilePlain(t *testing.T) {
 		}
 	})
 
-	target := NewSwears(testRepos, client, tempDirPath)
+	target := NewSwears(testRepos, tempDirPath, WithClient(client))
 	got := target.GetSwearFile("en", false)
 
 	if got == nil {
@@ -125,7 +125,7 @@ func TestGetSwearFileEncoded(t *testing.T) {
 		}
 	})
 
-	target := NewSwears(testRepos, client, tempDirPath)
+	target := NewSwears(testRepos, tempDirPath, WithClient(client))
 	got := target.GetSwearFile("en", true)
 
 	if got == nil {
@@ -157,13 +157,13 @@ func TestDownloadTTSFile(t *testing.T) {
 	err := mock.downloadTTSFile(testFile, "test_text", "test_lang")
 
 	if err != nil {
-		t.Fatal("This should be nil!")
+		t.Fatal("this should be nil")
 	}
 
 	data, err := os.ReadFile(testFile)
 
 	if err != nil || string(data) != "OK" {
-		t.Fatal("File not created")
+		t.Fatal("file not created")
 	}
 }
 

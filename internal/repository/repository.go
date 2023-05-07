@@ -3,25 +3,25 @@ package repository
 import (
 	"bufio"
 	"errors"
-	"log"
 	"math/rand"
 	"os"
 
 	"github.com/google/uuid"
 	"github.com/loghinalexandru/swears/internal/models"
+	"github.com/rs/zerolog"
 )
 
-const (
-	emptyDataStore = "empty data store"
+var (
+	ErrEmptyDataStore = errors.New("empty data store")
 )
 
 type fileDB struct {
 	lang   string
-	logger *log.Logger
+	logger zerolog.Logger
 	data   []models.Record
 }
 
-func New(logger *log.Logger, language string, path string) *fileDB {
+func New(logger zerolog.Logger, language string, path string) *fileDB {
 	db := &fileDB{
 		lang:   language,
 		logger: logger,
@@ -38,7 +38,7 @@ func (db *fileDB) Lang() string {
 
 func (db *fileDB) Get() (models.Record, error) {
 	if len(db.data) == 0 {
-		return models.Record{}, errors.New(emptyDataStore)
+		return models.Record{}, ErrEmptyDataStore
 	}
 
 	index := rand.Intn(len(db.data))
@@ -49,12 +49,12 @@ func (db *fileDB) load(filePath string) {
 	_, err := os.Stat(filePath)
 
 	if errors.Is(err, os.ErrNotExist) {
-		panic("No file found!")
+		db.logger.Panic().Msg("no file found")
 	}
 
 	fh, err := os.Open(filePath)
 	if err != nil {
-		db.logger.Fatal("Could not open file!")
+		db.logger.Panic().Msg("could not open file")
 	}
 
 	defer fh.Close()
