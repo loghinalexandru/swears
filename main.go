@@ -11,6 +11,10 @@ import (
 	"github.com/rs/zerolog"
 )
 
+const (
+	storagePath = "misc"
+)
+
 func main() {
 	logger := zerolog.New(os.Stderr).With().
 		Timestamp().
@@ -28,7 +32,7 @@ func main() {
 			frRepo,
 			enRepo,
 		},
-		"misc",
+		storagePath,
 		services.WithLogger(logger),
 	)
 
@@ -57,8 +61,9 @@ func contentType(next http.HandlerFunc, mediaType string) http.HandlerFunc {
 func logRoute(logger zerolog.Logger, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		logger.Info().
-			Str("Method", r.Method).
-			Str("RemoteAddr", r.RemoteAddr).
+			Str("method", r.Method).
+			Str("addr", r.RemoteAddr).
+			Str("agent", r.UserAgent()).
 			Str("URL", r.URL.Path).
 			Msg("Request received")
 		next(w, r)
