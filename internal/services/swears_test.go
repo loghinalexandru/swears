@@ -111,32 +111,6 @@ func TestGetSwearFilePlain(t *testing.T) {
 	}
 }
 
-func TestGetSwearFileEncoded(t *testing.T) {
-	t.Parallel()
-	testRepos := []models.SwearsRepo{TestRepo{}}
-	tempDirPath := t.TempDir()
-	swearRecord, _ := testRepos[0].Get()
-
-	client := newTestClient(func(req *http.Request) *http.Response {
-		return &http.Response{
-			StatusCode: 200,
-			Body:       io.NopCloser(bytes.NewBufferString(`OK`)),
-			Header:     make(http.Header),
-		}
-	})
-
-	target := NewSwears(testRepos, tempDirPath, WithClient(client))
-	got := target.GetSwearFile("en", true)
-
-	if got == nil {
-		t.Fatal("buffer is empty")
-	}
-
-	if _, err := os.Stat(tempDirPath + "/" + swearRecord.ID.String() + ".dca"); err != nil {
-		t.Error(err)
-	}
-}
-
 func TestDownloadTTSFile(t *testing.T) {
 	t.Parallel()
 

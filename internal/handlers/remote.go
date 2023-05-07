@@ -1,13 +1,15 @@
 package handlers
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
-	"github.com/jonas747/dca"
 	"github.com/kkdai/youtube/v2"
+	"github.com/loghinalexandru/swears/internal/services"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -32,12 +34,17 @@ func NewRemote(logger zerolog.Logger) *RemoteHandler {
 	}
 }
 
-// AddLater: rewrite this with a service & opus toggle
 func (h *RemoteHandler) RemoteVideo(writer http.ResponseWriter, request *http.Request) {
 	var ID string
+	var opus bool
+	var result []byte
 
 	if request.URL.Query().Has("id") {
 		ID = request.URL.Query().Get("id")
+	}
+
+	if request.URL.Query().Has("opus") {
+		opus, _ = strconv.ParseBool(request.URL.Query().Get("opus"))
 	}
 
 	metadata, err := h.client.GetVideo(ID)
@@ -64,23 +71,11 @@ func (h *RemoteHandler) RemoteVideo(writer http.ResponseWriter, request *http.Re
 	}
 
 	defer stream.Close()
+	result, err = io.ReadAll(stream)
 
-	if err != nil {
-		log.Err(err).Send()
-		writer.WriteHeader(http.StatusInternalServerError)
-		return
+	if opus {
+		result, err = services.Encode(bytes.NewReader(result))
 	}
-
-	encdOpt := dca.StdEncodeOptions
-	encdOpt.RawOutput = true
-	encodeSession, err := dca.EncodeMem(stream, encdOpt)
-
-	if err != nil {
-		h.logger.Err(err).Send()
-	}
-
-	result, err := io.ReadAll(encodeSession)
-	defer encodeSession.Cleanup()
 
 	if err != nil {
 		log.Err(err).Send()

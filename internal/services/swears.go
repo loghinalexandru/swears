@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -9,13 +10,13 @@ import (
 	"os"
 	"sync"
 
-	"github.com/jonas747/dca"
 	"github.com/loghinalexandru/swears/internal/models"
 	"github.com/rs/zerolog"
 )
 
 var (
 	errMissingRepo = errors.New("missing repository for asked language")
+	errEmptyBuffer = errors.New("resulting buffer has not data")
 )
 
 const (
@@ -102,31 +103,19 @@ func (svc *Swears) GetSwearFile(lang string, opus bool) []byte {
 		svc.downloadTTSFile(fname, swear.Value, lang)
 	}
 
+	result, err = os.ReadFile(fname)
+
 	if opus {
-		encdOpt := dca.StdEncodeOptions
-		encdOpt.RawOutput = true
-		encodeSession, err := dca.EncodeFile(fname, encdOpt)
-
-		if err != nil {
-			svc.logger.Err(err).Send()
-			return nil
-		}
-
-		fname = fmt.Sprintf("%s/%s.dca", svc.downloadPath, swear.ID)
-		output, err := os.Create(fname)
-		if err != nil {
-			svc.logger.Err(err).Send()
-			return nil
-		}
-
-		io.Copy(output, encodeSession)
-		output.Close()
-		encodeSession.Cleanup()
+		result, err = Encode(bytes.NewReader(result))
 	}
 
-	result, err = os.ReadFile(fname)
 	if err != nil {
 		svc.logger.Err(err).Send()
+		return nil
+	}
+
+	if len(result) == 0 {
+		svc.logger.Err(errEmptyBuffer).Send()
 		return nil
 	}
 
