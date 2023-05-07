@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	ErrVideoToLong = errors.New("video is too long to play")
+	errVideoToLong = errors.New("video is too long to play")
 )
 
 const (
@@ -32,6 +32,7 @@ func NewRemote(logger zerolog.Logger) *RemoteHandler {
 	}
 }
 
+// AddLater: rewrite this with a service & opus toggle
 func (h *RemoteHandler) RemoteVideo(writer http.ResponseWriter, request *http.Request) {
 	var ID string
 
@@ -48,7 +49,7 @@ func (h *RemoteHandler) RemoteVideo(writer http.ResponseWriter, request *http.Re
 	}
 
 	if metadata.Duration > durationMax {
-		log.Err(err).Send()
+		log.Err(errVideoToLong).Send()
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
