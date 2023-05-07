@@ -61,7 +61,8 @@ func (h *RemoteHandler) RemoteVideo(writer http.ResponseWriter, request *http.Re
 		return
 	}
 
-	formats := metadata.Formats.WithAudioChannels()
+	formats := metadata.Formats.WithAudioChannels().Quality("tiny")
+	formats.Sort()
 	stream, _, err := h.client.GetStream(metadata, &formats[0])
 
 	if err != nil {
