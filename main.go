@@ -36,11 +36,13 @@ func main() {
 		services.WithLogger(logger),
 	)
 
-	handler := handlers.NewRandom(logger, svc)
+	handlerRand := handlers.NewRandom(logger, svc)
+	handlerRemote := handlers.NewRemote(logger)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/random", logRoute(logger, contentType(handler.Random, "application/json")))
-	mux.HandleFunc("/api/random/file", logRoute(logger, contentType(handler.RandomFile, "application/octet-stream")))
+	mux.HandleFunc("/api/random", logRoute(logger, contentType(handlerRand.Random, "application/json")))
+	mux.HandleFunc("/api/random/file", logRoute(logger, contentType(handlerRand.RandomFile, "application/octet-stream")))
+	mux.HandleFunc("/api/remote", logRoute(logger, contentType(handlerRemote.RemoteVideo, "application/octet-stream")))
 
 	server := http.Server{
 		Addr:    ":3000",

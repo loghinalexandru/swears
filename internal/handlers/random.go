@@ -14,19 +14,19 @@ type Response struct {
 	Lang  string `json:"lang"`
 }
 
-type HTTPHandler struct {
+type RandomHandler struct {
 	logger zerolog.Logger
 	swears *services.Swears
 }
 
-func NewRandom(logger zerolog.Logger, svc *services.Swears) *HTTPHandler {
-	return &HTTPHandler{
+func NewRandom(logger zerolog.Logger, svc *services.Swears) *RandomHandler {
+	return &RandomHandler{
 		logger: logger,
 		swears: svc,
 	}
 }
 
-func (handler *HTTPHandler) Random(writer http.ResponseWriter, request *http.Request) {
+func (handler *RandomHandler) Random(writer http.ResponseWriter, request *http.Request) {
 	lang := "en"
 
 	if request.URL.Query().Has("lang") {
@@ -53,7 +53,7 @@ func (handler *HTTPHandler) Random(writer http.ResponseWriter, request *http.Req
 	writer.Write(res)
 }
 
-func (handler *HTTPHandler) RandomFile(writer http.ResponseWriter, request *http.Request) {
+func (handler *RandomHandler) RandomFile(writer http.ResponseWriter, request *http.Request) {
 	lang := "en"
 	encode := false
 
