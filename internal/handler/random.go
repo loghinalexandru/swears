@@ -1,11 +1,11 @@
-package handlers
+package handler
 
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 
-	"github.com/loghinalexandru/swears/internal/services"
+	"github.com/loghinalexandru/swears/internal/encoding"
+	"github.com/loghinalexandru/swears/internal/service"
 	"github.com/rs/zerolog"
 )
 
@@ -16,10 +16,10 @@ type Response struct {
 
 type RandomHandler struct {
 	logger zerolog.Logger
-	swears *services.Swears
+	swears *service.Swears
 }
 
-func NewRandom(logger zerolog.Logger, svc *services.Swears) *RandomHandler {
+func NewRandom(logger zerolog.Logger, svc *service.Swears) *RandomHandler {
 	return &RandomHandler{
 		logger: logger,
 		swears: svc,
@@ -55,17 +55,18 @@ func (handler *RandomHandler) Random(writer http.ResponseWriter, request *http.R
 
 func (handler *RandomHandler) RandomFile(writer http.ResponseWriter, request *http.Request) {
 	lang := "en"
-	encode := false
+	var enc service.Encoder
 
 	if request.URL.Query().Has("lang") {
 		lang = request.URL.Query().Get("lang")
 	}
 
-	if request.URL.Query().Has("opus") {
-		encode, _ = strconv.ParseBool(request.URL.Query().Get("opus"))
+	switch request.URL.Query().Get("encoder") {
+	case "opus":
+		enc = encoding.NewOpus()
 	}
 
-	result := handler.swears.GetSwearFile(lang, encode)
+	result := handler.swears.GetSwearFile(lang, enc)
 
 	if result == nil {
 		writer.WriteHeader(http.StatusNotFound)

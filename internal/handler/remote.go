@@ -1,15 +1,15 @@
-package handlers
+package handler
 
 import (
 	"bytes"
 	"errors"
 	"io"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/kkdai/youtube/v2"
-	"github.com/loghinalexandru/swears/internal/services"
+	"github.com/loghinalexandru/swears/internal/encoding"
+	"github.com/loghinalexandru/swears/internal/service"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -36,15 +36,16 @@ func NewRemote(logger zerolog.Logger) *RemoteHandler {
 
 func (h *RemoteHandler) RemoteVideo(writer http.ResponseWriter, request *http.Request) {
 	var ID string
-	var opus bool
 	var result []byte
+	var encoder service.Encoder
 
 	if request.URL.Query().Has("id") {
 		ID = request.URL.Query().Get("id")
 	}
 
-	if request.URL.Query().Has("opus") {
-		opus, _ = strconv.ParseBool(request.URL.Query().Get("opus"))
+	switch request.URL.Query().Get("encoder") {
+	case "opus":
+		encoder = encoding.NewOpus()
 	}
 
 	metadata, err := h.client.GetVideo(ID)
@@ -74,8 +75,8 @@ func (h *RemoteHandler) RemoteVideo(writer http.ResponseWriter, request *http.Re
 	defer stream.Close()
 	result, err = io.ReadAll(stream)
 
-	if opus {
-		result, err = services.Encode(bytes.NewReader(result))
+	if encoder != nil {
+		result, err = encoder.Encode(bytes.NewReader(result))
 	}
 
 	if err != nil {

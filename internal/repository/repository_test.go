@@ -3,7 +3,7 @@ package repository
 import (
 	"testing"
 
-	"github.com/loghinalexandru/swears/internal/models"
+	"github.com/loghinalexandru/swears/internal/model"
 )
 
 func TestLang(t *testing.T) {
@@ -25,7 +25,7 @@ func TestGet_SingleValue(t *testing.T) {
 	t.Parallel()
 
 	mock := fileDB{
-		data: []models.Record{
+		data: []model.Record{
 			{
 				Value: "test",
 			},
@@ -43,7 +43,7 @@ func TestGet_EmptyData(t *testing.T) {
 	t.Parallel()
 
 	mock := fileDB{
-		data: []models.Record{},
+		data: []model.Record{},
 	}
 
 	res, err := mock.Get()

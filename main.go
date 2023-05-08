@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/loghinalexandru/swears/internal/handlers"
-	"github.com/loghinalexandru/swears/internal/models"
+	"github.com/loghinalexandru/swears/internal/handler"
+	"github.com/loghinalexandru/swears/internal/model"
 	"github.com/loghinalexandru/swears/internal/repository"
-	"github.com/loghinalexandru/swears/internal/services"
+	"github.com/loghinalexandru/swears/internal/service"
 	"github.com/rs/zerolog"
 )
 
@@ -26,18 +26,18 @@ func main() {
 	frRepo := repository.New(logger, "fr", "misc/datastore/fr.txt")
 	enRepo := repository.New(logger, "en", "misc/datastore/en.txt")
 
-	svc := services.NewSwears(
-		[]models.SwearsRepo{
+	svc := service.NewSwears(
+		[]model.SwearsRepo{
 			roRepo,
 			frRepo,
 			enRepo,
 		},
 		storagePath,
-		services.WithLogger(logger),
+		service.WithLogger(logger),
 	)
 
-	handlerRand := handlers.NewRandom(logger, svc)
-	handlerRemote := handlers.NewRemote(logger)
+	handlerRand := handler.NewRandom(logger, svc)
+	handlerRemote := handler.NewRemote(logger)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/random", logRoute(logger, contentType(handlerRand.Random, "application/json")))
@@ -66,7 +66,7 @@ func logRoute(logger zerolog.Logger, next http.HandlerFunc) http.HandlerFunc {
 			Str("method", r.Method).
 			Str("addr", r.RemoteAddr).
 			Str("agent", r.UserAgent()).
-			Str("URL", r.URL.Path).
+			Str("url", r.URL.Path).
 			Msg("Request received")
 		next(w, r)
 	}

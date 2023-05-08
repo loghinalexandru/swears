@@ -1,4 +1,4 @@
-package services
+package service
 
 import (
 	"bytes"
@@ -10,18 +10,22 @@ import (
 	"os"
 	"sync"
 
-	"github.com/loghinalexandru/swears/internal/models"
+	"github.com/loghinalexandru/swears/internal/model"
 	"github.com/rs/zerolog"
 )
 
 var (
 	errMissingRepo = errors.New("missing repository for asked language")
-	errEmptyBuffer = errors.New("resulting buffer has not data")
+	errEmptyBuffer = errors.New("resulting buffer has no data")
 )
 
 const (
 	ttsURL = "http://translate.google.com/translate_tts?ie=UTF-8&total=1&idx=0&textlen=32&client=tw-ob&q=%s&tl=%s"
 )
+
+type Encoder interface {
+	Encode(io.Reader) ([]byte, error)
+}
 
 type swearsOpt func(*Swears)
 
@@ -30,16 +34,16 @@ type Swears struct {
 	logger       zerolog.Logger
 	client       *http.Client
 	mtx          sync.Mutex
-	data         map[string]models.SwearsRepo
+	data         map[string]model.SwearsRepo
 }
 
-func NewSwears(repos []models.SwearsRepo, downloadPath string, opts ...swearsOpt) *Swears {
+func NewSwears(repos []model.SwearsRepo, downloadPath string, opts ...swearsOpt) *Swears {
 	result := &Swears{
 		downloadPath: downloadPath,
 		client:       http.DefaultClient,
 		logger:       zerolog.Nop().With().Logger(),
 		mtx:          sync.Mutex{},
-		data:         make(map[string]models.SwearsRepo),
+		data:         make(map[string]model.SwearsRepo),
 	}
 
 	for _, repo := range repos {
@@ -81,7 +85,8 @@ func (svc *Swears) GetSwear(lang string) (string, error) {
 	return res.Value, nil
 }
 
-func (svc *Swears) GetSwearFile(lang string, opus bool) []byte {
+// Return err and handle it in handler
+func (svc *Swears) GetSwearFile(lang string, enc Encoder) []byte {
 	var result []byte
 	repo, exists := svc.data[lang]
 
@@ -105,8 +110,8 @@ func (svc *Swears) GetSwearFile(lang string, opus bool) []byte {
 
 	result, err = os.ReadFile(fname)
 
-	if opus {
-		result, err = Encode(bytes.NewReader(result))
+	if enc != nil {
+		result, err = enc.Encode(bytes.NewReader(result))
 	}
 
 	if err != nil {

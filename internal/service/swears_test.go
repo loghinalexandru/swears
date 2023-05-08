@@ -1,4 +1,4 @@
-package services
+package service
 
 import (
 	"bytes"
@@ -9,13 +9,13 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/loghinalexandru/swears/internal/models"
+	"github.com/loghinalexandru/swears/internal/model"
 )
 
 func TestNew(t *testing.T) {
 	t.Parallel()
 
-	got := NewSwears([]models.SwearsRepo{TestRepo{}}, "")
+	got := NewSwears([]model.SwearsRepo{TestRepo{}}, "")
 
 	if got.data != nil && got.data["en"] == nil {
 		t.Error("different repositories")
@@ -29,7 +29,7 @@ func TestNew(t *testing.T) {
 func TestGetSwear(t *testing.T) {
 	t.Parallel()
 
-	target := NewSwears([]models.SwearsRepo{TestRepo{}}, "")
+	target := NewSwears([]model.SwearsRepo{TestRepo{}}, "")
 	got, err := target.GetSwear("en")
 
 	if err != nil {
@@ -44,7 +44,7 @@ func TestGetSwear(t *testing.T) {
 func TestGetSwearWithInvalidLanguage(t *testing.T) {
 	t.Parallel()
 
-	target := NewSwears([]models.SwearsRepo{TestRepoWithError{}}, "")
+	target := NewSwears([]model.SwearsRepo{TestRepoWithError{}}, "")
 	_, err := target.GetSwear("en")
 
 	if err == nil {
@@ -55,7 +55,7 @@ func TestGetSwearWithInvalidLanguage(t *testing.T) {
 func TestGetSwearWithRepoError(t *testing.T) {
 	t.Parallel()
 
-	target := NewSwears([]models.SwearsRepo{TestRepo{}}, "")
+	target := NewSwears([]model.SwearsRepo{TestRepo{}}, "")
 	_, err := target.GetSwear("invalid language")
 
 	if err == nil {
@@ -66,8 +66,8 @@ func TestGetSwearWithRepoError(t *testing.T) {
 func TestGetSwearFileWithInvalidLanguage(t *testing.T) {
 	t.Parallel()
 
-	target := NewSwears([]models.SwearsRepo{TestRepo{}}, "")
-	got := target.GetSwearFile("invalid language", false)
+	target := NewSwears([]model.SwearsRepo{TestRepo{}}, "")
+	got := target.GetSwearFile("invalid language", nil)
 
 	if got != nil {
 		t.Error("wrong value returned")
@@ -77,8 +77,8 @@ func TestGetSwearFileWithInvalidLanguage(t *testing.T) {
 func TestGetSwearFileWithError(t *testing.T) {
 	t.Parallel()
 
-	target := NewSwears([]models.SwearsRepo{TestRepoWithError{}}, "")
-	got := target.GetSwearFile("en", false)
+	target := NewSwears([]model.SwearsRepo{TestRepoWithError{}}, "")
+	got := target.GetSwearFile("en", nil)
 
 	if got != nil {
 		t.Error("wrong value returned")
@@ -87,7 +87,8 @@ func TestGetSwearFileWithError(t *testing.T) {
 
 func TestGetSwearFilePlain(t *testing.T) {
 	t.Parallel()
-	testRepos := []models.SwearsRepo{TestRepo{}}
+
+	testRepos := []model.SwearsRepo{TestRepo{}}
 	tempDirPath := t.TempDir()
 	swearRecord, _ := testRepos[0].Get()
 
@@ -100,7 +101,7 @@ func TestGetSwearFilePlain(t *testing.T) {
 	})
 
 	target := NewSwears(testRepos, tempDirPath, WithClient(client))
-	got := target.GetSwearFile("en", false)
+	got := target.GetSwearFile("en", nil)
 
 	if got == nil {
 		t.Fatal("buffer is empty")
@@ -108,6 +109,57 @@ func TestGetSwearFilePlain(t *testing.T) {
 
 	if _, err := os.Stat(tempDirPath + "/" + swearRecord.ID.String() + ".mp3"); err != nil {
 		t.Error(err)
+	}
+}
+
+func TestGetSwearFileEncoded(t *testing.T) {
+	t.Parallel()
+
+	want := "bogus encoded string"
+	testRepos := []model.SwearsRepo{TestRepo{}}
+	tempDirPath := t.TempDir()
+
+	client := newTestClient(func(req *http.Request) *http.Response {
+		return &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(bytes.NewBufferString(`OK`)),
+			Header:     make(http.Header),
+		}
+	})
+
+	target := NewSwears(testRepos, tempDirPath, WithClient(client))
+	got := target.GetSwearFile("en", TestEncoder{
+		msg: want,
+	})
+
+	if got == nil {
+		t.Fatal("buffer is empty")
+	}
+
+	if string(got) != want {
+		t.Error("invalid encoded stream")
+	}
+}
+
+func TestGetSwearFileEncodedWithErr(t *testing.T) {
+	t.Parallel()
+
+	testRepos := []model.SwearsRepo{TestRepo{}}
+	tempDirPath := t.TempDir()
+
+	client := newTestClient(func(req *http.Request) *http.Response {
+		return &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(bytes.NewBufferString(`OK`)),
+			Header:     make(http.Header),
+		}
+	})
+
+	target := NewSwears(testRepos, tempDirPath, WithClient(client))
+	got := target.GetSwearFile("en", TestEncoderWithErr{})
+
+	if got != nil {
+		t.Error("buffer is not empty")
 	}
 }
 
@@ -143,8 +195,22 @@ func TestDownloadTTSFile(t *testing.T) {
 
 type TestRepo struct{}
 
-func (t TestRepo) Get() (models.Record, error) {
-	return models.Record{Value: "swear"}, nil
+type TestEncoder struct {
+	msg string
+}
+
+type TestEncoderWithErr struct {
+}
+
+func (t TestEncoder) Encode(io.Reader) ([]byte, error) {
+	return []byte(t.msg), nil
+}
+
+func (t TestEncoderWithErr) Encode(io.Reader) ([]byte, error) {
+	return nil, errors.New("bogus error")
+}
+func (t TestRepo) Get() (model.Record, error) {
+	return model.Record{Value: "swear"}, nil
 }
 
 func (t TestRepo) Lang() string {
@@ -153,8 +219,8 @@ func (t TestRepo) Lang() string {
 
 type TestRepoWithError struct{}
 
-func (t TestRepoWithError) Get() (models.Record, error) {
-	return models.Record{}, errors.New("test error")
+func (t TestRepoWithError) Get() (model.Record, error) {
+	return model.Record{}, errors.New("test error")
 }
 
 func (t TestRepoWithError) Lang() string {

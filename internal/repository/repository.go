@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/google/uuid"
-	"github.com/loghinalexandru/swears/internal/models"
+	"github.com/loghinalexandru/swears/internal/model"
 	"github.com/rs/zerolog"
 )
 
@@ -18,14 +18,14 @@ var (
 type fileDB struct {
 	lang   string
 	logger zerolog.Logger
-	data   []models.Record
+	data   []model.Record
 }
 
 func New(logger zerolog.Logger, language string, path string) *fileDB {
 	db := &fileDB{
 		lang:   language,
 		logger: logger,
-		data:   []models.Record{},
+		data:   []model.Record{},
 	}
 	db.load(path)
 
@@ -36,9 +36,9 @@ func (db *fileDB) Lang() string {
 	return db.lang
 }
 
-func (db *fileDB) Get() (models.Record, error) {
+func (db *fileDB) Get() (model.Record, error) {
 	if len(db.data) == 0 {
-		return models.Record{}, ErrEmptyDataStore
+		return model.Record{}, ErrEmptyDataStore
 	}
 
 	index := rand.Intn(len(db.data))
@@ -63,7 +63,7 @@ func (db *fileDB) load(filePath string) {
 	scaner.Split(bufio.ScanLines)
 
 	for scaner.Scan() {
-		db.data = append(db.data, models.Record{
+		db.data = append(db.data, model.Record{
 			ID:    uuid.New(),
 			Value: scaner.Text(),
 		})
