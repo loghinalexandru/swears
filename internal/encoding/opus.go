@@ -1,9 +1,14 @@
 package encoding
 
 import (
+	"errors"
 	"io"
 
 	"github.com/jonas747/dca"
+)
+
+var (
+	errUnexpectedFailure = errors.New("something went wrong with the encoding process")
 )
 
 type opus struct {
@@ -27,5 +32,16 @@ func (enc opus) Encode(stream io.Reader) ([]byte, error) {
 	}
 
 	defer encodeSession.Cleanup()
-	return io.ReadAll(encodeSession)
+	result, err := io.ReadAll(encodeSession)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if result == nil {
+		return nil, errUnexpectedFailure
+	}
+
+	return result, nil
+
 }

@@ -9,15 +9,15 @@ import (
 func TestLang(t *testing.T) {
 	t.Parallel()
 
-	testLang := "en"
+	want := "en"
 	mock := fileDB{
-		lang: testLang,
+		lang: want,
 	}
 
-	res := mock.Lang()
+	got := mock.Lang()
 
-	if testLang != res {
-		t.Fatal("wrong language")
+	if got != want {
+		t.Fatalf("want: %q, got %q", want, got)
 	}
 }
 
@@ -35,7 +35,7 @@ func TestGet_SingleValue(t *testing.T) {
 	res, err := mock.Get()
 
 	if err == nil && res.Value != "test" {
-		t.Fatal("wrong object returned")
+		t.Fatal("unexpected object returned")
 	}
 }
 
@@ -49,7 +49,7 @@ func TestGet_EmptyData(t *testing.T) {
 	res, err := mock.Get()
 
 	if err != nil && res.Value != "" {
-		t.Fatal("wrong object returned")
+		t.Fatal("unexpected object returned")
 	}
 }
 

@@ -36,7 +36,7 @@ func (handler *RandomHandler) Random(writer http.ResponseWriter, request *http.R
 	swear, err := handler.swears.GetSwear(lang)
 
 	if err != nil {
-		handler.logger.Err(err).Send()
+		handler.logger.Err(err).Msg("Unexpected error when generating swear")
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -47,15 +47,17 @@ func (handler *RandomHandler) Random(writer http.ResponseWriter, request *http.R
 	})
 
 	if err != nil {
-		handler.logger.Err(err).Send()
+		handler.logger.Err(err).Msg("Unexpected error during serialization")
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	writer.Write(res)
 }
 
 func (handler *RandomHandler) RandomFile(writer http.ResponseWriter, request *http.Request) {
-	lang := "en"
 	var enc service.Encoder
+	lang := "en"
 
 	if request.URL.Query().Has("lang") {
 		lang = request.URL.Query().Get("lang")
@@ -66,10 +68,11 @@ func (handler *RandomHandler) RandomFile(writer http.ResponseWriter, request *ht
 		enc = encoding.NewOpus()
 	}
 
-	result := handler.swears.GetSwearFile(lang, enc)
+	result, err := handler.swears.GetSwearFile(lang, enc)
 
-	if result == nil {
-		writer.WriteHeader(http.StatusNotFound)
+	if err != nil {
+		handler.logger.Err(err).Msg("Unexpected error when retrieving file")
+		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 

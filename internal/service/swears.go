@@ -11,12 +11,10 @@ import (
 	"sync"
 
 	"github.com/loghinalexandru/swears/internal/model"
-	"github.com/rs/zerolog"
 )
 
 var (
 	errMissingRepo = errors.New("missing repository for asked language")
-	errEmptyBuffer = errors.New("resulting buffer has no data")
 )
 
 const (
@@ -31,7 +29,6 @@ type swearsOpt func(*Swears)
 
 type Swears struct {
 	downloadPath string
-	logger       zerolog.Logger
 	client       *http.Client
 	mtx          sync.Mutex
 	data         map[string]model.SwearsRepo
@@ -41,7 +38,6 @@ func NewSwears(repos []model.SwearsRepo, downloadPath string, opts ...swearsOpt)
 	result := &Swears{
 		downloadPath: downloadPath,
 		client:       http.DefaultClient,
-		logger:       zerolog.Nop().With().Logger(),
 		mtx:          sync.Mutex{},
 		data:         make(map[string]model.SwearsRepo),
 	}
@@ -55,12 +51,6 @@ func NewSwears(repos []model.SwearsRepo, downloadPath string, opts ...swearsOpt)
 	}
 
 	return result
-}
-
-func WithLogger(logger zerolog.Logger) swearsOpt {
-	return func(s *Swears) {
-		s.logger = logger
-	}
 }
 
 func WithClient(client *http.Client) swearsOpt {
@@ -85,20 +75,17 @@ func (svc *Swears) GetSwear(lang string) (string, error) {
 	return res.Value, nil
 }
 
-// Return err and handle it in handler
-func (svc *Swears) GetSwearFile(lang string, enc Encoder) []byte {
-	var result []byte
+func (svc *Swears) GetSwearFile(lang string, enc Encoder) ([]byte, error) {
 	repo, exists := svc.data[lang]
 
 	if !exists {
-		return result
+		return nil, errMissingRepo
 	}
 
 	swear, err := repo.Get()
 
 	if err != nil {
-		svc.logger.Err(err).Send()
-		return result
+		return nil, err
 	}
 
 	fname := fmt.Sprintf("%s/%s.mp3", svc.downloadPath, swear.ID)
@@ -108,23 +95,17 @@ func (svc *Swears) GetSwearFile(lang string, enc Encoder) []byte {
 		svc.downloadTTSFile(fname, swear.Value, lang)
 	}
 
-	result, err = os.ReadFile(fname)
+	result, err := os.ReadFile(fname)
 
 	if enc != nil {
 		result, err = enc.Encode(bytes.NewReader(result))
 	}
 
 	if err != nil {
-		svc.logger.Err(err).Send()
-		return nil
+		return nil, err
 	}
 
-	if len(result) == 0 {
-		svc.logger.Err(errEmptyBuffer).Send()
-		return nil
-	}
-
-	return result
+	return result, nil
 }
 
 func (svc *Swears) downloadTTSFile(fileName string, text string, lang string) error {

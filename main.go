@@ -22,9 +22,9 @@ func main() {
 		Logger().
 		Level(zerolog.InfoLevel)
 
-	roRepo := repository.New(logger, "ro", "misc/datastore/ro.txt")
-	frRepo := repository.New(logger, "fr", "misc/datastore/fr.txt")
-	enRepo := repository.New(logger, "en", "misc/datastore/en.txt")
+	roRepo := repository.New("ro", "misc/datastore/ro.txt")
+	frRepo := repository.New("fr", "misc/datastore/fr.txt")
+	enRepo := repository.New("en", "misc/datastore/en.txt")
 
 	svc := service.NewSwears(
 		[]model.SwearsRepo{
@@ -33,7 +33,6 @@ func main() {
 			enRepo,
 		},
 		storagePath,
-		service.WithLogger(logger),
 	)
 
 	handlerRand := handler.NewRandom(logger, svc)

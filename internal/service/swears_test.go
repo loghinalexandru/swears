@@ -18,11 +18,11 @@ func TestNew(t *testing.T) {
 	got := NewSwears([]model.SwearsRepo{TestRepo{}}, "")
 
 	if got.data != nil && got.data["en"] == nil {
-		t.Error("different repositories")
+		t.Error("missing expected \"en\" repository")
 	}
 
 	if got.client != http.DefaultClient {
-		t.Error("different http client")
+		t.Error("unexpected http client set")
 	}
 }
 
@@ -44,22 +44,11 @@ func TestGetSwear(t *testing.T) {
 func TestGetSwearWithInvalidLanguage(t *testing.T) {
 	t.Parallel()
 
-	target := NewSwears([]model.SwearsRepo{TestRepoWithError{}}, "")
-	_, err := target.GetSwear("en")
-
-	if err == nil {
-		t.Error("error is nill")
-	}
-}
-
-func TestGetSwearWithRepoError(t *testing.T) {
-	t.Parallel()
-
 	target := NewSwears([]model.SwearsRepo{TestRepo{}}, "")
 	_, err := target.GetSwear("invalid language")
 
-	if err == nil {
-		t.Error("error is nill")
+	if err != errMissingRepo {
+		t.Errorf("unexpected error, got: %q want: %q", err, errMissingRepo)
 	}
 }
 
@@ -67,21 +56,32 @@ func TestGetSwearFileWithInvalidLanguage(t *testing.T) {
 	t.Parallel()
 
 	target := NewSwears([]model.SwearsRepo{TestRepo{}}, "")
-	got := target.GetSwearFile("invalid language", nil)
+	_, err := target.GetSwearFile("invalid language", nil)
 
-	if got != nil {
-		t.Error("wrong value returned")
+	if err != errMissingRepo {
+		t.Errorf("unexpected error, got: %q want: %q", err, errMissingRepo)
 	}
 }
 
-func TestGetSwearFileWithError(t *testing.T) {
+func TestGetSwearWithRepoError(t *testing.T) {
 	t.Parallel()
 
 	target := NewSwears([]model.SwearsRepo{TestRepoWithError{}}, "")
-	got := target.GetSwearFile("en", nil)
+	_, err := target.GetSwear("en")
 
-	if got != nil {
-		t.Error("wrong value returned")
+	if err == nil {
+		t.Error("missing expected error")
+	}
+}
+
+func TestGetSwearFileWithRepoError(t *testing.T) {
+	t.Parallel()
+
+	target := NewSwears([]model.SwearsRepo{TestRepoWithError{}}, "")
+	_, err := target.GetSwearFile("en", nil)
+
+	if err == nil {
+		t.Error("missing expected error")
 	}
 }
 
@@ -101,10 +101,14 @@ func TestGetSwearFilePlain(t *testing.T) {
 	})
 
 	target := NewSwears(testRepos, tempDirPath, WithClient(client))
-	got := target.GetSwearFile("en", nil)
+	got, err := target.GetSwearFile("en", nil)
+
+	if err != nil {
+		t.Fatalf("unexpected error: %q", err)
+	}
 
 	if got == nil {
-		t.Fatal("buffer is empty")
+		t.Fatal("resulting buffer is empty")
 	}
 
 	if _, err := os.Stat(tempDirPath + "/" + swearRecord.ID.String() + ".mp3"); err != nil {
@@ -128,16 +132,20 @@ func TestGetSwearFileEncoded(t *testing.T) {
 	})
 
 	target := NewSwears(testRepos, tempDirPath, WithClient(client))
-	got := target.GetSwearFile("en", TestEncoder{
+	got, err := target.GetSwearFile("en", TestEncoder{
 		msg: want,
 	})
 
+	if err != nil {
+		t.Fatalf("unexpected error: %q", err)
+	}
+
 	if got == nil {
-		t.Fatal("buffer is empty")
+		t.Fatal("encoded buffer is empty")
 	}
 
 	if string(got) != want {
-		t.Error("invalid encoded stream")
+		t.Error("invalid encoded buffer")
 	}
 }
 
@@ -156,10 +164,10 @@ func TestGetSwearFileEncodedWithErr(t *testing.T) {
 	})
 
 	target := NewSwears(testRepos, tempDirPath, WithClient(client))
-	got := target.GetSwearFile("en", TestEncoderWithErr{})
+	_, err := target.GetSwearFile("en", TestEncoderWithErr{})
 
-	if got != nil {
-		t.Error("buffer is not empty")
+	if err == nil {
+		t.Error("missing expected error")
 	}
 }
 
@@ -183,7 +191,7 @@ func TestDownloadTTSFile(t *testing.T) {
 	err := mock.downloadTTSFile(testFile, "test_text", "test_lang")
 
 	if err != nil {
-		t.Fatal("this should be nil")
+		t.Fatalf("unexpected error : %q", err)
 	}
 
 	data, err := os.ReadFile(testFile)

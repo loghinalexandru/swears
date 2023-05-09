@@ -2,7 +2,6 @@ package handler
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"net/http"
 	"time"
@@ -14,12 +13,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var (
-	errVideoToLong = errors.New("video is too long to play")
-)
-
 const (
-	durationMax = time.Second * 30
+	durationMax = time.Second * 15
 )
 
 type RemoteHandler struct {
@@ -51,14 +46,14 @@ func (h *RemoteHandler) RemoteVideo(writer http.ResponseWriter, request *http.Re
 	metadata, err := h.client.GetVideo(ID)
 
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Unexpected error when retrieving video metadata")
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	if metadata.Duration > durationMax {
-		log.Err(errVideoToLong).Send()
-		writer.WriteHeader(http.StatusInternalServerError)
+		log.Warn().Msgf("Provided video is longer than expected max length: %v", durationMax)
+		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -67,7 +62,7 @@ func (h *RemoteHandler) RemoteVideo(writer http.ResponseWriter, request *http.Re
 	stream, _, err := h.client.GetStream(metadata, &formats[0])
 
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Unexpected error when retrieving video data")
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -80,7 +75,7 @@ func (h *RemoteHandler) RemoteVideo(writer http.ResponseWriter, request *http.Re
 	}
 
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Unexpected error when encoding video data")
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
