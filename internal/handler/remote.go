@@ -7,14 +7,12 @@ import (
 	"time"
 
 	"github.com/kkdai/youtube/v2"
-	"github.com/loghinalexandru/swears/internal/encoding"
-	"github.com/loghinalexandru/swears/internal/service"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
 const (
-	durationMax = time.Second * 15
+	durationMax = time.Second * 30
 )
 
 type RemoteHandler struct {
@@ -30,20 +28,8 @@ func NewRemote(logger zerolog.Logger) *RemoteHandler {
 }
 
 func (h *RemoteHandler) RemoteVideo(writer http.ResponseWriter, request *http.Request) {
-	var ID string
-	var result []byte
-	var encoder service.Encoder
-
-	if request.URL.Query().Has("id") {
-		ID = request.URL.Query().Get("id")
-	}
-
-	switch request.URL.Query().Get("encoder") {
-	case "opus":
-		encoder = encoding.NewOpus()
-	}
-
-	metadata, err := h.client.GetVideo(ID)
+	videoID := parseID(request.URL.Query())
+	metadata, err := h.client.GetVideo(videoID)
 
 	if err != nil {
 		log.Err(err).Msg("Unexpected error when retrieving video metadata")
@@ -68,10 +54,12 @@ func (h *RemoteHandler) RemoteVideo(writer http.ResponseWriter, request *http.Re
 	}
 
 	defer stream.Close()
-	result, err = io.ReadAll(stream)
+	result, err := io.ReadAll(stream)
 
-	if encoder != nil {
-		result, err = encoder.Encode(bytes.NewReader(result))
+	enc := parseEncoder(request.URL.Query())
+
+	if enc != nil {
+		result, err = enc.Encode(bytes.NewReader(result))
 	}
 
 	if err != nil {

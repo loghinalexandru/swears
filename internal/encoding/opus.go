@@ -38,7 +38,7 @@ func (enc opus) Encode(stream io.Reader) ([]byte, error) {
 		return nil, err
 	}
 
-	if result == nil {
+	if len(result) == 0 {
 		return nil, errUnexpectedFailure
 	}
 

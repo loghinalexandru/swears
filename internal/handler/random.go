@@ -4,14 +4,13 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/loghinalexandru/swears/internal/encoding"
 	"github.com/loghinalexandru/swears/internal/service"
 	"github.com/rs/zerolog"
 )
 
 type Response struct {
-	Swear string `json:"swear"`
-	Lang  string `json:"lang"`
+	Swear    string `json:"swear"`
+	Language string `json:"lang"`
 }
 
 type RandomHandler struct {
@@ -27,12 +26,7 @@ func NewRandom(logger zerolog.Logger, svc *service.Swears) *RandomHandler {
 }
 
 func (handler *RandomHandler) Random(writer http.ResponseWriter, request *http.Request) {
-	lang := "en"
-
-	if request.URL.Query().Has("lang") {
-		lang = request.URL.Query().Get("lang")
-	}
-
+	lang := parseLanguage(request.URL.Query())
 	swear, err := handler.swears.GetSwear(lang)
 
 	if err != nil {
@@ -42,8 +36,8 @@ func (handler *RandomHandler) Random(writer http.ResponseWriter, request *http.R
 	}
 
 	res, err := json.Marshal(Response{
-		Swear: swear,
-		Lang:  lang,
+		Swear:    swear,
+		Language: lang,
 	})
 
 	if err != nil {
@@ -56,17 +50,8 @@ func (handler *RandomHandler) Random(writer http.ResponseWriter, request *http.R
 }
 
 func (handler *RandomHandler) RandomFile(writer http.ResponseWriter, request *http.Request) {
-	var enc service.Encoder
-	lang := "en"
-
-	if request.URL.Query().Has("lang") {
-		lang = request.URL.Query().Get("lang")
-	}
-
-	switch request.URL.Query().Get("encoder") {
-	case "opus":
-		enc = encoding.NewOpus()
-	}
+	lang := parseLanguage(request.URL.Query())
+	enc := parseEncoder(request.URL.Query())
 
 	result, err := handler.swears.GetSwearFile(lang, enc)
 
