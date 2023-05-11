@@ -69,7 +69,7 @@ func (h *RemoteHandler) RemoteVideo(writer http.ResponseWriter, request *http.Re
 	}
 
 	if err != nil {
-		log.Err(err).Msgf("Unexpected error when encoding video data with encoder type: %v", encoderType)
+		log.Err(err).Msgf("Unexpected error when encoding video data with encoder type: %q", encoderType)
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}

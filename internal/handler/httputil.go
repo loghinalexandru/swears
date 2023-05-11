@@ -13,10 +13,6 @@ func parseLanguage(query url.Values) string {
 }
 
 func parseEncoder(query url.Values) string {
-	if !query.Has("encoder") {
-		return "none"
-	}
-
 	if query.Has("opus") {
 		return "opus"
 	}
