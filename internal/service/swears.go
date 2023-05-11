@@ -10,6 +10,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/loghinalexandru/swears/internal/encoding"
 	"github.com/loghinalexandru/swears/internal/model"
 )
 
@@ -20,10 +21,6 @@ var (
 const (
 	ttsURL = "http://translate.google.com/translate_tts?ie=UTF-8&total=1&idx=0&textlen=32&client=tw-ob&q=%s&tl=%s"
 )
-
-type Encoder interface {
-	Encode(io.Reader) ([]byte, error)
-}
 
 type swearsOpt func(*Swears)
 
@@ -75,7 +72,7 @@ func (svc *Swears) GetSwear(lang string) (string, error) {
 	return res.Value, nil
 }
 
-func (svc *Swears) GetSwearFile(lang string, enc Encoder) ([]byte, error) {
+func (svc *Swears) GetSwearFile(lang string, enc encoding.Encoder) ([]byte, error) {
 	repo, exists := svc.data[lang]
 
 	if !exists {
