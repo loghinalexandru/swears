@@ -1,4 +1,4 @@
-package encoding
+package codec
 
 import (
 	"errors"
@@ -15,7 +15,7 @@ type opus struct {
 	options *dca.EncodeOptions
 }
 
-func NewOpus() *opus {
+func newOpus() *opus {
 	opt := dca.StdEncodeOptions
 	opt.RawOutput = true
 

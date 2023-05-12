@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/kkdai/youtube/v2"
-	"github.com/loghinalexandru/swears/internal/encoding"
+	"github.com/loghinalexandru/swears/internal/codec"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -30,7 +30,6 @@ func NewRemote(logger zerolog.Logger) *RemoteHandler {
 
 func (h *RemoteHandler) RemoteVideo(writer http.ResponseWriter, request *http.Request) {
 	videoID := parseID(request.URL.Query())
-	encoderType := parseEncoder(request.URL.Query())
 	metadata, err := h.client.GetVideo(videoID)
 
 	if err != nil {
@@ -64,12 +63,13 @@ func (h *RemoteHandler) RemoteVideo(writer http.ResponseWriter, request *http.Re
 		return
 	}
 
-	if enc := encoding.FromString(encoderType); enc != nil {
-		result, err = enc.Encode(bytes.NewReader(result))
+	var codecType = parseCodec(request.URL.Query())
+	if codec := codec.New(codecType); codec != nil {
+		result, err = codec.Encode(bytes.NewReader(result))
 	}
 
 	if err != nil {
-		log.Err(err).Msgf("Unexpected error when encoding video data with encoder type: %q", encoderType)
+		log.Err(err).Msgf("Unexpected error when encoding video data with codec type: %q", codecType)
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}

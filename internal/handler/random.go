@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/loghinalexandru/swears/internal/encoding"
+	"github.com/loghinalexandru/swears/internal/codec"
 	"github.com/loghinalexandru/swears/internal/service"
 	"github.com/rs/zerolog"
 )
@@ -52,9 +52,9 @@ func (handler *RandomHandler) Random(writer http.ResponseWriter, request *http.R
 
 func (handler *RandomHandler) RandomFile(writer http.ResponseWriter, request *http.Request) {
 	lang := parseLanguage(request.URL.Query())
-	encoderType := parseEncoder(request.URL.Query())
+	codecType := parseCodec(request.URL.Query())
 
-	result, err := handler.swears.GetSwearFile(lang, encoding.FromString(encoderType))
+	result, err := handler.swears.GetSwearFile(lang, codec.New(codecType))
 
 	if err != nil {
 		handler.logger.Err(err).Msg("Unexpected error when retrieving file")

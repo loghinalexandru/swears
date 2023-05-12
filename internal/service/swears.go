@@ -10,7 +10,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/loghinalexandru/swears/internal/encoding"
+	"github.com/loghinalexandru/swears/internal/codec"
 	"github.com/loghinalexandru/swears/internal/model"
 )
 
@@ -72,7 +72,7 @@ func (svc *Swears) GetSwear(lang string) (string, error) {
 	return res.Value, nil
 }
 
-func (svc *Swears) GetSwearFile(lang string, enc encoding.Encoder) ([]byte, error) {
+func (svc *Swears) GetSwearFile(lang string, codec codec.Encoder) ([]byte, error) {
 	repo, exists := svc.data[lang]
 
 	if !exists {
@@ -94,8 +94,8 @@ func (svc *Swears) GetSwearFile(lang string, enc encoding.Encoder) ([]byte, erro
 
 	result, err := os.ReadFile(fname)
 
-	if enc != nil {
-		result, err = enc.Encode(bytes.NewReader(result))
+	if codec != nil {
+		result, err = codec.Encode(bytes.NewReader(result))
 	}
 
 	if err != nil {

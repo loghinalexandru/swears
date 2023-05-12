@@ -12,12 +12,12 @@ func parseLanguage(query url.Values) string {
 	return query.Get("lang")
 }
 
-func parseEncoder(query url.Values) string {
+func parseCodec(query url.Values) string {
 	if query.Has("opus") {
 		return "opus"
 	}
 
-	return query.Get("encoder")
+	return query.Get("codec")
 }
 
 func parseID(query url.Values) string {

@@ -1,4 +1,4 @@
-package encoding
+package codec
 
 import (
 	"io"
@@ -9,10 +9,10 @@ type Encoder interface {
 	Encode(io.Reader) ([]byte, error)
 }
 
-func FromString(encoderType string) Encoder {
-	switch strings.ToLower(encoderType) {
+func New(codecType string) Encoder {
+	switch strings.ToLower(codecType) {
 	case "opus":
-		return NewOpus()
+		return newOpus()
 	default:
 		return nil
 	}
