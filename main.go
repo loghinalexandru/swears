@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/loghinalexandru/swears/internal/handlers"
-	"github.com/loghinalexandru/swears/internal/models"
+	"github.com/loghinalexandru/swears/internal/handler"
+	"github.com/loghinalexandru/swears/internal/model"
 	"github.com/loghinalexandru/swears/internal/repository"
-	"github.com/loghinalexandru/swears/internal/services"
+	"github.com/loghinalexandru/swears/internal/service"
 	"github.com/rs/zerolog"
 )
 
@@ -22,25 +22,26 @@ func main() {
 		Logger().
 		Level(zerolog.InfoLevel)
 
-	roRepo := repository.New(logger, "ro", "misc/datastore/ro.txt")
-	frRepo := repository.New(logger, "fr", "misc/datastore/fr.txt")
-	enRepo := repository.New(logger, "en", "misc/datastore/en.txt")
+	roRepo := repository.New("ro", "misc/datastore/ro.txt")
+	frRepo := repository.New("fr", "misc/datastore/fr.txt")
+	enRepo := repository.New("en", "misc/datastore/en.txt")
 
-	svc := services.NewSwears(
-		[]models.SwearsRepo{
+	svc := service.NewSwears(
+		[]model.SwearsRepo{
 			roRepo,
 			frRepo,
 			enRepo,
 		},
 		storagePath,
-		services.WithLogger(logger),
 	)
 
-	handler := handlers.NewRandom(logger, svc)
+	handlerRand := handler.NewRandom(logger, svc)
+	handlerRemote := handler.NewRemote(logger)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/random", logRoute(logger, contentType(handler.Random, "application/json")))
-	mux.HandleFunc("/api/random/file", logRoute(logger, contentType(handler.RandomFile, "application/octet-stream")))
+	mux.HandleFunc("/api/random", logRoute(logger, contentType(handlerRand.Random, "application/json")))
+	mux.HandleFunc("/api/random/file", logRoute(logger, contentType(handlerRand.RandomFile, "application/octet-stream")))
+	mux.HandleFunc("/api/remote", logRoute(logger, contentType(handlerRemote.RemoteVideo, "application/octet-stream")))
 
 	server := http.Server{
 		Addr:    ":3000",
@@ -64,7 +65,7 @@ func logRoute(logger zerolog.Logger, next http.HandlerFunc) http.HandlerFunc {
 			Str("method", r.Method).
 			Str("addr", r.RemoteAddr).
 			Str("agent", r.UserAgent()).
-			Str("URL", r.URL.Path).
+			Str("url", r.URL.Path).
 			Msg("Request received")
 		next(w, r)
 	}

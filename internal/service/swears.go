@@ -1,6 +1,7 @@
-package services
+package service
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -9,9 +10,8 @@ import (
 	"os"
 	"sync"
 
-	"github.com/jonas747/dca"
-	"github.com/loghinalexandru/swears/internal/models"
-	"github.com/rs/zerolog"
+	"github.com/loghinalexandru/swears/internal/codec"
+	"github.com/loghinalexandru/swears/internal/model"
 )
 
 var (
@@ -26,19 +26,17 @@ type swearsOpt func(*Swears)
 
 type Swears struct {
 	downloadPath string
-	logger       zerolog.Logger
 	client       *http.Client
 	mtx          sync.Mutex
-	data         map[string]models.SwearsRepo
+	data         map[string]model.SwearsRepo
 }
 
-func NewSwears(repos []models.SwearsRepo, downloadPath string, opts ...swearsOpt) *Swears {
+func NewSwears(repos []model.SwearsRepo, downloadPath string, opts ...swearsOpt) *Swears {
 	result := &Swears{
 		downloadPath: downloadPath,
 		client:       http.DefaultClient,
-		logger:       zerolog.Nop().With().Logger(),
 		mtx:          sync.Mutex{},
-		data:         make(map[string]models.SwearsRepo),
+		data:         make(map[string]model.SwearsRepo),
 	}
 
 	for _, repo := range repos {
@@ -50,12 +48,6 @@ func NewSwears(repos []models.SwearsRepo, downloadPath string, opts ...swearsOpt
 	}
 
 	return result
-}
-
-func WithLogger(logger zerolog.Logger) swearsOpt {
-	return func(s *Swears) {
-		s.logger = logger
-	}
 }
 
 func WithClient(client *http.Client) swearsOpt {
@@ -80,19 +72,17 @@ func (svc *Swears) GetSwear(lang string) (string, error) {
 	return res.Value, nil
 }
 
-func (svc *Swears) GetSwearFile(lang string, opus bool) []byte {
-	var result []byte
+func (svc *Swears) GetSwearFile(lang string, codec codec.Encoder) ([]byte, error) {
 	repo, exists := svc.data[lang]
 
 	if !exists {
-		return result
+		return nil, errMissingRepo
 	}
 
 	swear, err := repo.Get()
 
 	if err != nil {
-		svc.logger.Err(err).Send()
-		return result
+		return nil, err
 	}
 
 	fname := fmt.Sprintf("%s/%s.mp3", svc.downloadPath, swear.ID)
@@ -102,35 +92,17 @@ func (svc *Swears) GetSwearFile(lang string, opus bool) []byte {
 		svc.downloadTTSFile(fname, swear.Value, lang)
 	}
 
-	if opus {
-		encdOpt := dca.StdEncodeOptions
-		encdOpt.RawOutput = true
-		encodeSession, err := dca.EncodeFile(fname, encdOpt)
+	result, err := os.ReadFile(fname)
 
-		if err != nil {
-			svc.logger.Err(err).Send()
-			return nil
-		}
-
-		fname = fmt.Sprintf("%s/%s.dca", svc.downloadPath, swear.ID)
-		output, err := os.Create(fname)
-		if err != nil {
-			svc.logger.Err(err).Send()
-			return nil
-		}
-
-		io.Copy(output, encodeSession)
-		output.Close()
-		encodeSession.Cleanup()
+	if codec != nil {
+		result, err = codec.Encode(bytes.NewReader(result))
 	}
 
-	result, err = os.ReadFile(fname)
 	if err != nil {
-		svc.logger.Err(err).Send()
-		return nil
+		return nil, err
 	}
 
-	return result
+	return result, nil
 }
 
 func (svc *Swears) downloadTTSFile(fileName string, text string, lang string) error {

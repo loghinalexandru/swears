@@ -16,8 +16,8 @@ spec:
     spec:
       containers:
         - name: swears
-          image: ghcr.io/loghinalexandru/swears.api:latest
-          imagePullPolicy: Always
+          image: ghcr.io/loghinalexandru/swears:0.6.0
+          imagePullPolicy: IfNotPresent
           resources:
             requests:
               cpu: 1
