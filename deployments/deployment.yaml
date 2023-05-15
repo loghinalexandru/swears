@@ -23,7 +23,6 @@ spec:
               cpu: 1
               memory: 64Mi
             limits:
-              cpu: 1
               memory: 64Mi
           ports:
             - containerPort: 3000

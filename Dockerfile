@@ -1,6 +1,6 @@
 #syntax=docker/dockerfile:latest
 
-FROM golang:1.20-alpine AS build
+FROM golang:alpine3.17 AS build
 
 WORKDIR /app
 
@@ -9,7 +9,7 @@ COPY ../ .
 RUN go mod download
 RUN go build -o /swears ./
 
-FROM golang:1.20-alpine
+FROM golang:alpine3.17
 
 RUN apk update && apk add ffmpeg
 
